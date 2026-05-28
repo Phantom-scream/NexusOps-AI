@@ -1,0 +1,105 @@
+# Environment
+.env
+.env.local
+.env.*.local
+.env.production
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.venv/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# FastAPI / Uvicorn
+*.log
+celerybeat-schedule
+celerybeat.pid
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+nosetests.xml
+
+# Node.js / Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+frontend/dist/
+frontend/build/
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+
+# Kubernetes secrets
+*-secret.yaml
+*-secrets.yaml
+
+# Databases
+*.sqlite
+*.db
+
+# Alembic
+backend/alembic/versions/*.pyc
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
+.cache/
+.parcel-cache/

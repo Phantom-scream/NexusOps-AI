@@ -1,0 +1,145 @@
+"""
+NexusOps AI — Incidents API
+"""
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
+from app.core.security import CurrentUser, get_current_user
+from app.models.incident import Incident, IncidentAnalysis
+from app.repositories.incident_repository import IncidentAnalysisRepository, IncidentRepository
+from app.schemas.incident import (
+    IncidentAnalysisOut,
+    IncidentCreate,
+    IncidentListResponse,
+    IncidentOut,
+    IncidentUpdate,
+)
+from app.services.incident_service import IncidentService
+
+router = APIRouter()
+
+
+def get_incident_service(db: AsyncSession = Depends(get_db)) -> IncidentService:
+    return IncidentService(
+        repository=IncidentRepository(model=Incident, session=db),
+        analysis_repository=IncidentAnalysisRepository(model=IncidentAnalysis, session=db),
+    )
+
+
+@router.get("", response_model=IncidentListResponse)
+async def list_incidents(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    severity: Optional[str] = Query(default=None),
+    status: Optional[str] = Query(default=None, alias="status"),
+    cluster_id: Optional[str] = Query(default=None),
+    service: IncidentService = Depends(get_incident_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """List incidents with optional filters."""
+    skip = (page - 1) * page_size
+    incidents, total = await service.list_incidents(
+        skip=skip, limit=page_size,
+        severity=severity, status=status, cluster_id=cluster_id,
+    )
+    return IncidentListResponse(
+        items=[IncidentOut.model_validate(i) for i in incidents],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.post("", response_model=IncidentOut, status_code=status.HTTP_201_CREATED)
+async def create_incident(
+    data: IncidentCreate,
+    service: IncidentService = Depends(get_incident_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """Manually create an incident."""
+    incident = await service.create_incident(data)
+    return IncidentOut.model_validate(incident)
+
+
+@router.get("/stats")
+async def get_incident_stats(
+    service: IncidentService = Depends(get_incident_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """Get incident dashboard statistics."""
+    return await service.get_dashboard_stats()
+
+
+@router.get("/{incident_id}", response_model=IncidentOut)
+async def get_incident(
+    incident_id: str,
+    service: IncidentService = Depends(get_incident_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """Get incident details."""
+    incident = await service.get_incident(incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return IncidentOut.model_validate(incident)
+
+
+@router.patch("/{incident_id}", response_model=IncidentOut)
+async def update_incident(
+    incident_id: str,
+    data: IncidentUpdate,
+    service: IncidentService = Depends(get_incident_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """Update incident metadata or status."""
+    incident = await service.update_incident(incident_id, data)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return IncidentOut.model_validate(incident)
+
+
+@router.post("/{incident_id}/resolve", response_model=IncidentOut)
+async def resolve_incident(
+    incident_id: str,
+    service: IncidentService = Depends(get_incident_service),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Mark an incident as resolved."""
+    incident = await service.resolve_incident(incident_id, resolved_by=current_user.email)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return IncidentOut.model_validate(incident)
+
+
+@router.post("/{incident_id}/investigate", status_code=status.HTTP_202_ACCEPTED)
+async def trigger_ai_investigation(
+    incident_id: str,
+    query: str = Query(..., min_length=10),
+    context_window_minutes: int = Query(default=60, ge=5, le=1440),
+    service: IncidentService = Depends(get_incident_service),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Trigger asynchronous AI investigation for an incident."""
+    incident = await service.get_incident(incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    from app.workers.analysis_tasks import analyze_incident_task
+    task = analyze_incident_task.delay(incident_id, query, context_window_minutes)
+
+    return {"task_id": task.id, "status": "queued", "incident_id": incident_id}
+
+
+@router.get("/{incident_id}/analyses", response_model=list[IncidentAnalysisOut])
+async def get_incident_analyses(
+    incident_id: str,
+    service: IncidentService = Depends(get_incident_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """Get all AI analyses for an incident."""
+    incident = await service.get_incident(incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return [IncidentAnalysisOut.model_validate(a) for a in incident.analyses]

@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexusops-config
+  namespace: nexusops
+data:
+  APP_NAME: "NexusOps AI"
+  APP_ENV: "production"
+  LOG_LEVEL: "INFO"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "nexusops"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  QDRANT_HOST: "qdrant"
+  QDRANT_PORT: "6333"
+  KAFKA_BOOTSTRAP_SERVERS: "redpanda:9092"
+  OTEL_COLLECTOR_ENDPOINT: "http://otel-collector:4317"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nexusops-api
+  namespace: nexusops
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nexusops-reader
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "nodes", "namespaces", "services", "events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nexusops-reader-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nexusops-reader
+subjects:
+  - kind: ServiceAccount
+    name: nexusops-api
+    namespace: nexusops

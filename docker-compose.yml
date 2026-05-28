@@ -1,0 +1,323 @@
+version: "3.9"
+
+name: nexusops
+
+# ============================================================
+# NexusOps AI — Docker Compose (Development)
+# ============================================================
+
+x-common-env: &common-env
+  DATABASE_URL: postgresql+asyncpg://nexusops:nexusops_secret@postgres:5432/nexusops
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  QDRANT_HOST: qdrant
+  QDRANT_PORT: 6333
+  KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+
+services:
+
+  # ----------------------------------------------------------
+  # Core Application Services
+  # ----------------------------------------------------------
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: nexusops-api
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *common-env
+      APP_ENV: development
+      APP_DEBUG: "true"
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+      - ~/.kube:/root/.kube:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: nexusops-worker
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      <<: *common-env
+      APP_ENV: development
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+
+  worker-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: nexusops-beat
+    command: celery -A app.workers.celery_app beat --loglevel=info
+    environment:
+      <<: *common-env
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - redis
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: nexusops-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+      VITE_WS_URL: ws://localhost:8000
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # Databases
+  # ----------------------------------------------------------
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexusops-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: nexusops
+      POSTGRES_USER: nexusops
+      POSTGRES_PASSWORD: nexusops_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexusops -d nexusops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexusops-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: nexusops-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # Event Streaming
+  # ----------------------------------------------------------
+
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: nexusops-redpanda
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp 1
+      - --memory 512M
+      - --reserve-memory 0M
+      - --node-id 0
+      - --check=false
+      - --kafka-addr PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:9092
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+
+  redpanda-console:
+    image: redpandadata/console:latest
+    container_name: nexusops-redpanda-console
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    depends_on:
+      - redpanda
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # Observability Stack
+  # ----------------------------------------------------------
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: nexusops-prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./infrastructure/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: nexusops-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: nexusops_admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/observability/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    container_name: nexusops-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: nexusops-otel
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8888:8888"
+    volumes:
+      - ./infrastructure/observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # Security
+  # ----------------------------------------------------------
+
+  opa:
+    image: openpolicyagent/opa:latest
+    container_name: nexusops-opa
+    ports:
+      - "8181:8181"
+    command:
+      - run
+      - --server
+      - --log-level=info
+      - /policies
+    volumes:
+      - ./infrastructure/policies:/policies:ro
+    networks:
+      - nexusops-net
+    restart: unless-stopped
+
+# ============================================================
+# Networks
+# ============================================================
+networks:
+  nexusops-net:
+    driver: bridge
+    name: nexusops-network
+
+# ============================================================
+# Volumes
+# ============================================================
+volumes:
+  postgres_data:
+    name: nexusops_postgres_data
+  redis_data:
+    name: nexusops_redis_data
+  qdrant_data:
+    name: nexusops_qdrant_data
+  redpanda_data:
+    name: nexusops_redpanda_data
+  prometheus_data:
+    name: nexusops_prometheus_data
+  grafana_data:
+    name: nexusops_grafana_data
+  loki_data:
+    name: nexusops_loki_data

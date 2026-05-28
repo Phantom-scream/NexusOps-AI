@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexusops-api
+  namespace: nexusops
+  labels:
+    app: nexusops-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nexusops-api
+  template:
+    metadata:
+      labels:
+        app: nexusops-api
+    spec:
+      serviceAccountName: nexusops-api
+      containers:
+        - name: api
+          image: ghcr.io/phantom-scream/nexusops-ai/backend:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: nexusops-config
+            - secretRef:
+                name: nexusops-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexusops-worker
+  namespace: nexusops
+  labels:
+    app: nexusops-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nexusops-worker
+  template:
+    metadata:
+      labels:
+        app: nexusops-worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/phantom-scream/nexusops-ai/backend:latest
+          command: ["celery", "-A", "app.workers.celery_app", "worker", "-l", "info", "-Q", "cluster,analysis"]
+          envFrom:
+            - configMapRef:
+                name: nexusops-config
+            - secretRef:
+                name: nexusops-secrets
+          resources:
+            requests:
+              cpu: 500m
+              memory: 768Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
