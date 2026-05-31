@@ -86,7 +86,17 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    # Comma-separated string to avoid pydantic-settings v2 JSON-decode issues with List[str]
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
+
+    @property
+    def cors_origins_list(self) -> List[str]:
+        import json
+        try:
+            parsed = json.loads(self.CORS_ORIGINS)
+            return parsed if isinstance(parsed, list) else [self.CORS_ORIGINS]
+        except (json.JSONDecodeError, ValueError):
+            return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
     RATE_LIMIT_PER_MINUTE: int = 60
 
@@ -108,13 +118,6 @@ class Settings(BaseSettings):
     # ----------------------------------------------------------
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"
-
-    @field_validator("CORS_ORIGINS", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, v):
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v
 
     @property
     def is_production(self) -> bool:

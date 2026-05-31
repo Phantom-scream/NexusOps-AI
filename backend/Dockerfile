@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv for fast package management
-RUN pip install uv
+# Install uv for fast package management, plus setuptools (provides pkg_resources)
+RUN pip install uv setuptools
 
 WORKDIR /app
 
