@@ -129,10 +129,12 @@ The next engineering priority should be converting the dashboard from static moc
 
 ### Phase 6: AI Incident Investigation
 
-1. Add demo-safe LLM mode for local portfolio usage.
-2. Persist AI investigation sessions and messages.
-3. Connect AI Investigation UI to backend query and stream endpoints.
-4. Add structured source attribution from RAG results.
+1. Completed persistent investigation runs and normalized investigation evidence.
+2. Completed context building from topology, incidents, metrics, logs, events, and traces.
+3. Completed OpenAI/Ollama provider abstraction with deterministic fallback for demo-safe local usage.
+4. Completed remediation recommendation engine and incident update flow.
+5. Completed AI Investigation frontend backed by live APIs.
+6. Remaining: add token streaming for investigation progress and broaden RAG indexing coverage.
 
 ### Phase 7: Terraform Security and Drift
 

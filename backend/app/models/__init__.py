@@ -9,6 +9,7 @@ from app.models.cluster import (
     KubernetesWorkload,
 )
 from app.models.incident import Incident, IncidentAnalysis
+from app.models.investigation import Investigation, InvestigationEvidence
 from app.models.security_finding import SecurityFinding, TerraformScan
 from app.models.cost_recommendation import CostRecommendation, CostAnalysisReport
 from app.models.telemetry import InfrastructureEvent, LogEntry, Metric, TelemetrySource, Trace
@@ -18,6 +19,7 @@ __all__ = [
     "Cluster", "ClusterNode", "KubernetesNamespace", "KubernetesWorkload",
     "KubernetesReplicaSet", "KubernetesPod", "KubernetesService",
     "Incident", "IncidentAnalysis",
+    "Investigation", "InvestigationEvidence",
     "SecurityFinding", "TerraformScan",
     "CostRecommendation", "CostAnalysisReport",
     "TelemetrySource", "Metric", "LogEntry", "InfrastructureEvent", "Trace",

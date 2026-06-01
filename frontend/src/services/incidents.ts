@@ -7,8 +7,9 @@ export interface Incident {
   status: 'open' | 'investigating' | 'resolved' | 'closed'
   source: string
   cluster_id: string
+  cluster_name?: string
   namespace?: string
-  workload?: string
+  affected_workload?: string
   root_cause?: string
   ai_confidence?: number
   created_at: string

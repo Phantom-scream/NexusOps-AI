@@ -209,6 +209,7 @@ Response:
 - [Architecture Overview](docs/architecture.md)
 - [Infrastructure Discovery](docs/infrastructure-discovery.md)
 - [Observability & Telemetry](docs/observability-telemetry.md)
+- [AI Investigation Engine](docs/ai-investigation-engine.md)
 - [API Reference](docs/api.md)
 - [Developer Onboarding](docs/onboarding.md)
 - [Deployment Guide](docs/deployment.md)

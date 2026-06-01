@@ -4,7 +4,17 @@ Central router that registers all API sub-routers
 """
 from fastapi import APIRouter
 
-from app.api.v1 import ai, auth, clusters, cost, demo, incidents, security, telemetry
+from app.api.v1 import (
+    ai,
+    auth,
+    clusters,
+    cost,
+    demo,
+    incidents,
+    investigations,
+    security,
+    telemetry,
+)
 
 api_router = APIRouter()
 
@@ -16,3 +26,4 @@ api_router.include_router(cost.router, prefix="/cost", tags=["Cost Optimization"
 api_router.include_router(ai.router, prefix="/ai", tags=["AI Investigation"])
 api_router.include_router(demo.router, prefix="/demo", tags=["Demo Infrastructure"])
 api_router.include_router(telemetry.router, tags=["Telemetry"])
+api_router.include_router(investigations.router, tags=["AI Investigations"])

@@ -1,28 +1,19 @@
 """
 Backend tests — shared fixtures
 """
-import asyncio
-import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
-from app.main import create_application
-from app.core.database import Base, get_db
 from app.core.config import settings
+from app.core.database import Base, get_db
+from app.main import create_application
 
+TEST_DATABASE_URL = settings.DATABASE_URL.rsplit("/", 1)[0] + "/nexusops_test"
 
-TEST_DATABASE_URL = settings.DATABASE_URL.replace("/nexusops", "/nexusops_test")
-
-engine_test = create_async_engine(TEST_DATABASE_URL, echo=False)
+engine_test = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
 TestSessionLocal = async_sessionmaker(engine_test, class_=AsyncSession, expire_on_commit=False)
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
