@@ -15,7 +15,14 @@ from app.schemas.cluster import (
     ClusterDetailOut,
     ClusterListResponse,
     ClusterOut,
+    ClusterNodeOut,
+    ClusterTopologyOut,
     ClusterUpdate,
+    NamespaceOut,
+    PodOut,
+    ReplicaSetOut,
+    ServiceOut,
+    SyncResponse,
     WorkloadOut,
 )
 from app.services.cluster_service import ClusterService
@@ -105,7 +112,7 @@ async def delete_cluster(
         raise HTTPException(status_code=404, detail="Cluster not found")
 
 
-@router.post("/{cluster_id}/sync", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/{cluster_id}/sync", response_model=SyncResponse, status_code=status.HTTP_202_ACCEPTED)
 async def trigger_cluster_sync(
     cluster_id: str,
     service: ClusterService = Depends(get_cluster_service),
@@ -122,7 +129,50 @@ async def trigger_cluster_sync(
     from app.workers.cluster_tasks import sync_cluster
     task = sync_cluster.delay(cluster_id)
 
-    return {"task_id": task.id, "status": "queued", "cluster_id": cluster_id}
+    return SyncResponse(task_id=task.id, status="queued", cluster_id=cluster_id)
+
+
+@router.get("/{cluster_id}/namespaces", response_model=list[NamespaceOut])
+async def get_cluster_namespaces(
+    cluster_id: str,
+    service: ClusterService = Depends(get_cluster_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """List namespaces discovered in a cluster."""
+    cluster = await service.get_cluster(cluster_id)
+    if not cluster:
+        raise HTTPException(status_code=404, detail="Cluster not found")
+    return [NamespaceOut.model_validate(ns) for ns in await service.get_namespaces(cluster_id)]
+
+
+@router.get("/{cluster_id}/nodes", response_model=list[ClusterNodeOut])
+async def get_cluster_nodes(
+    cluster_id: str,
+    service: ClusterService = Depends(get_cluster_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """List nodes discovered in a cluster."""
+    cluster = await service.get_cluster(cluster_id)
+    if not cluster:
+        raise HTTPException(status_code=404, detail="Cluster not found")
+    return [ClusterNodeOut.model_validate(node) for node in await service.get_nodes(cluster_id)]
+
+
+@router.get("/{cluster_id}/deployments", response_model=list[WorkloadOut])
+async def get_cluster_deployments(
+    cluster_id: str,
+    namespace: Optional[str] = Query(default=None),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, le=200),
+    service: ClusterService = Depends(get_cluster_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """List Kubernetes deployments discovered in a cluster."""
+    cluster = await service.get_cluster(cluster_id)
+    if not cluster:
+        raise HTTPException(status_code=404, detail="Cluster not found")
+    deployments = await service.get_deployments(cluster_id, namespace, skip, limit)
+    return [WorkloadOut.model_validate(w) for w in deployments]
 
 
 @router.get("/{cluster_id}/workloads", response_model=list[WorkloadOut])
@@ -140,6 +190,70 @@ async def get_cluster_workloads(
         raise HTTPException(status_code=404, detail="Cluster not found")
     workloads = await service.get_workloads(cluster_id, namespace, skip, limit)
     return [WorkloadOut.model_validate(w) for w in workloads]
+
+
+@router.get("/{cluster_id}/pods", response_model=list[PodOut])
+async def get_cluster_pods(
+    cluster_id: str,
+    namespace: Optional[str] = Query(default=None),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, le=500),
+    service: ClusterService = Depends(get_cluster_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """List Kubernetes pods discovered in a cluster."""
+    cluster = await service.get_cluster(cluster_id)
+    if not cluster:
+        raise HTTPException(status_code=404, detail="Cluster not found")
+    pods = await service.get_pods(cluster_id, namespace, skip, limit)
+    return [PodOut.model_validate(pod) for pod in pods]
+
+
+@router.get("/{cluster_id}/services", response_model=list[ServiceOut])
+async def get_cluster_services(
+    cluster_id: str,
+    namespace: Optional[str] = Query(default=None),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, le=500),
+    service: ClusterService = Depends(get_cluster_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """List Kubernetes services discovered in a cluster."""
+    cluster = await service.get_cluster(cluster_id)
+    if not cluster:
+        raise HTTPException(status_code=404, detail="Cluster not found")
+    services = await service.get_services(cluster_id, namespace, skip, limit)
+    return [ServiceOut.model_validate(svc) for svc in services]
+
+
+@router.get("/{cluster_id}/replicasets", response_model=list[ReplicaSetOut])
+async def get_cluster_replicasets(
+    cluster_id: str,
+    namespace: Optional[str] = Query(default=None),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, le=500),
+    service: ClusterService = Depends(get_cluster_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """List Kubernetes ReplicaSets discovered in a cluster."""
+    cluster = await service.get_cluster(cluster_id)
+    if not cluster:
+        raise HTTPException(status_code=404, detail="Cluster not found")
+    replicasets = await service.get_replicasets(cluster_id, namespace, skip, limit)
+    return [ReplicaSetOut.model_validate(rs) for rs in replicasets]
+
+
+@router.get("/{cluster_id}/topology", response_model=ClusterTopologyOut)
+async def get_cluster_topology(
+    cluster_id: str,
+    service: ClusterService = Depends(get_cluster_service),
+    _: CurrentUser = Depends(get_current_user),
+):
+    """Return cluster → namespace → deployment → pod topology from persisted data."""
+    topology = await service.get_topology(cluster_id)
+    if not topology:
+        raise HTTPException(status_code=404, detail="Cluster not found")
+    return ClusterTopologyOut.model_validate(topology)
 
 
 @router.get("/{cluster_id}/summary")

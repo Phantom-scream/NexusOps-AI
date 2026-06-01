@@ -44,38 +44,35 @@ def sync_all_active_clusters(self) -> dict:
 async def _sync_cluster_async(cluster_id: str) -> dict:
     from app.core.database import AsyncSessionLocal
     from app.repositories.cluster_repository import ClusterRepository
-    from app.services.cluster_service import ClusterService
-    from app.infrastructure.kubernetes_client import KubernetesClient
+    from app.services.infrastructure_discovery_service import InfrastructureDiscoveryService
     from app.models.cluster import ClusterStatus
 
     logger.info("Starting cluster sync", cluster_id=cluster_id)
 
     async with AsyncSessionLocal() as session:
         repo = ClusterRepository(model=__import__("app.models.cluster", fromlist=["Cluster"]).Cluster, session=session)
-        service = ClusterService(repository=repo)
+        service = InfrastructureDiscoveryService(repository=repo)
 
-        cluster = await service.get_cluster(cluster_id)
+        cluster = await repo.get(cluster_id)
         if not cluster:
             logger.warning("Cluster not found for sync", cluster_id=cluster_id)
             return {"status": "not_found"}
 
         try:
-            k8s_client = KubernetesClient()
-            k8s_data = k8s_client.get_cluster_info()
-
-            await service.sync_cluster_resources(cluster_id, k8s_data)
+            synced = await service.sync_cluster(cluster_id)
             await session.commit()
 
             logger.info(
                 "Cluster sync complete",
                 cluster_id=cluster_id,
-                pod_count=k8s_data.get("pod_count", 0),
+                pod_count=synced.pod_count,
             )
             return {"status": "success", "cluster_id": cluster_id}
 
         except Exception as exc:
             logger.error("Cluster sync failed", cluster_id=cluster_id, error=str(exc))
-            await service.update_cluster_status(cluster_id, ClusterStatus.DEGRADED)
+            cluster.status = ClusterStatus.DEGRADED
+            await repo.save(cluster)
             await session.commit()
             return {"status": "error", "error": str(exc)}
 

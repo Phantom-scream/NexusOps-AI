@@ -2,7 +2,7 @@
 NexusOps AI — Cluster Pydantic Schemas
 """
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -57,6 +57,8 @@ class ClusterOut(BaseModel):
     node_count: int
     namespace_count: int
     pod_count: int
+    service_count: int = 0
+    deployment_count: int = 0
     cpu_capacity: Optional[float]
     memory_capacity_gb: Optional[float]
     is_active: bool
@@ -89,6 +91,7 @@ class WorkloadOut(BaseModel):
     replicas_desired: int
     replicas_ready: int
     image: Optional[str]
+    selector: Optional[dict] = None
     cpu_request_millicores: Optional[int]
     memory_request_mb: Optional[int]
     cpu_usage_percent: Optional[float]
@@ -98,3 +101,90 @@ class WorkloadOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class NamespaceOut(BaseModel):
+    id: str
+    cluster_id: str
+    name: str
+    status: str
+    labels: Optional[dict]
+    annotations: Optional[dict]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PodOut(BaseModel):
+    id: str
+    cluster_id: str
+    namespace_name: str
+    name: str
+    phase: str
+    status: str
+    node_name: Optional[str]
+    pod_ip: Optional[str]
+    restart_count: int
+    ready: bool
+    owner_kind: Optional[str]
+    owner_name: Optional[str]
+    containers: Optional[Any]
+    labels: Optional[dict]
+    started_at: Optional[datetime]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ServiceOut(BaseModel):
+    id: str
+    cluster_id: str
+    namespace_name: str
+    name: str
+    service_type: str
+    cluster_ip: Optional[str]
+    external_ip: Optional[str]
+    ports: Optional[Any]
+    selector: Optional[dict]
+    labels: Optional[dict]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ReplicaSetOut(BaseModel):
+    id: str
+    cluster_id: str
+    namespace_name: str
+    name: str
+    owner_kind: Optional[str]
+    owner_name: Optional[str]
+    replicas_desired: int
+    replicas_ready: int
+    labels: Optional[dict]
+    selector: Optional[dict]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class TopologyNode(BaseModel):
+    id: str
+    name: str
+    type: str
+    status: Optional[str] = None
+    metadata: dict = Field(default_factory=dict)
+    children: List["TopologyNode"] = Field(default_factory=list)
+
+
+class ClusterTopologyOut(BaseModel):
+    cluster_id: str
+    generated_at: datetime
+    root: TopologyNode
+
+
+class SyncResponse(BaseModel):
+    task_id: Optional[str] = None
+    status: str
+    cluster_id: str
+    mode: str = "queued"

@@ -90,7 +90,12 @@ class KubernetesClient:
             namespaces = core_api.list_namespace()
             result["namespace_count"] = len(namespaces.items)
             result["namespaces"] = [
-                {"name": ns.metadata.name, "status": ns.status.phase}
+                {
+                    "name": ns.metadata.name,
+                    "status": ns.status.phase,
+                    "labels": ns.metadata.labels or {},
+                    "annotations": ns.metadata.annotations or {},
+                }
                 for ns in namespaces.items
             ]
         except ApiException as exc:
@@ -138,6 +143,51 @@ class KubernetesClient:
             logger.warning("Failed to list statefulsets", error=str(exc))
 
         return workloads
+
+    def get_replicasets(self, namespace: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Fetch ReplicaSets for topology reconstruction."""
+        self._initialize()
+        apps_api = client.AppsV1Api(self._api_client)
+        try:
+            replicasets = (
+                apps_api.list_namespaced_replica_set(namespace)
+                if namespace
+                else apps_api.list_replica_set_for_all_namespaces()
+            )
+            return [self._parse_replicaset(rs) for rs in replicasets.items]
+        except ApiException as exc:
+            logger.warning("Failed to list replicasets", error=str(exc))
+            return []
+
+    def get_pods(self, namespace: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Fetch Pods with runtime state."""
+        self._initialize()
+        core_api = client.CoreV1Api(self._api_client)
+        try:
+            pods = (
+                core_api.list_namespaced_pod(namespace)
+                if namespace
+                else core_api.list_pod_for_all_namespaces()
+            )
+            return [self._parse_pod(pod) for pod in pods.items]
+        except ApiException as exc:
+            logger.warning("Failed to list pods", error=str(exc))
+            return []
+
+    def get_services(self, namespace: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Fetch Services."""
+        self._initialize()
+        core_api = client.CoreV1Api(self._api_client)
+        try:
+            services = (
+                core_api.list_namespaced_service(namespace)
+                if namespace
+                else core_api.list_service_for_all_namespaces()
+            )
+            return [self._parse_service(svc) for svc in services.items]
+        except ApiException as exc:
+            logger.warning("Failed to list services", error=str(exc))
+            return []
 
     def get_events(
         self,
@@ -232,6 +282,8 @@ class KubernetesClient:
             "memory_limit_mb": memory_lim,
             "labels": dep.metadata.labels or {},
             "annotations": dep.metadata.annotations or {},
+            "selector": spec.selector.match_labels if spec.selector else {},
+            "is_healthy": (dep.status.ready_replicas or 0 if dep.status else 0) >= (spec.replicas or 1),
         }
 
     def _parse_statefulset(self, ss) -> Dict[str, Any]:
@@ -244,6 +296,85 @@ class KubernetesClient:
             "image": ss.spec.template.spec.containers[0].image if ss.spec.template.spec.containers else None,
             "labels": ss.metadata.labels or {},
             "annotations": ss.metadata.annotations or {},
+            "selector": ss.spec.selector.match_labels if ss.spec.selector else {},
+            "is_healthy": (ss.status.ready_replicas or 0 if ss.status else 0) >= (ss.spec.replicas or 1),
+        }
+
+    def _parse_replicaset(self, rs) -> Dict[str, Any]:
+        owner = (rs.metadata.owner_references or [None])[0]
+        desired = rs.spec.replicas if rs.spec and rs.spec.replicas is not None else 0
+        ready = rs.status.ready_replicas if rs.status and rs.status.ready_replicas is not None else 0
+        return {
+            "name": rs.metadata.name,
+            "namespace_name": rs.metadata.namespace,
+            "owner_kind": owner.kind if owner else None,
+            "owner_name": owner.name if owner else None,
+            "replicas_desired": desired,
+            "replicas_ready": ready,
+            "labels": rs.metadata.labels or {},
+            "selector": rs.spec.selector.match_labels if rs.spec and rs.spec.selector else {},
+        }
+
+    def _parse_pod(self, pod) -> Dict[str, Any]:
+        owner = (pod.metadata.owner_references or [None])[0]
+        statuses = pod.status.container_statuses or []
+        restart_count = sum(status.restart_count or 0 for status in statuses)
+        ready = bool(statuses) and all(status.ready for status in statuses)
+        waiting_reason = next(
+            (
+                status.state.waiting.reason
+                for status in statuses
+                if status.state and status.state.waiting and status.state.waiting.reason
+            ),
+            None,
+        )
+        containers = [
+            {
+                "name": container.name,
+                "image": container.image,
+                "ready": status.ready if status else None,
+                "restart_count": status.restart_count if status else 0,
+            }
+            for container, status in zip(pod.spec.containers or [], statuses)
+        ]
+        phase = pod.status.phase or "Unknown"
+        return {
+            "name": pod.metadata.name,
+            "namespace_name": pod.metadata.namespace,
+            "phase": phase,
+            "status": waiting_reason or phase,
+            "node_name": pod.spec.node_name if pod.spec else None,
+            "pod_ip": pod.status.pod_ip if pod.status else None,
+            "restart_count": restart_count,
+            "ready": ready,
+            "owner_kind": owner.kind if owner else None,
+            "owner_name": owner.name if owner else None,
+            "containers": containers,
+            "labels": pod.metadata.labels or {},
+            "annotations": pod.metadata.annotations or {},
+            "started_at": pod.status.start_time if pod.status else None,
+        }
+
+    def _parse_service(self, svc) -> Dict[str, Any]:
+        external_ips = svc.spec.external_i_ps if svc.spec and svc.spec.external_i_ps else []
+        return {
+            "name": svc.metadata.name,
+            "namespace_name": svc.metadata.namespace,
+            "service_type": svc.spec.type if svc.spec else "ClusterIP",
+            "cluster_ip": svc.spec.cluster_ip if svc.spec else None,
+            "external_ip": ",".join(external_ips) if external_ips else None,
+            "ports": [
+                {
+                    "name": port.name,
+                    "port": port.port,
+                    "target_port": str(port.target_port) if port.target_port else None,
+                    "protocol": port.protocol,
+                }
+                for port in (svc.spec.ports or [])
+            ] if svc.spec else [],
+            "selector": svc.spec.selector or {} if svc.spec else {},
+            "labels": svc.metadata.labels or {},
+            "annotations": svc.metadata.annotations or {},
         }
 
     def _parse_event(self, event) -> Dict[str, Any]:

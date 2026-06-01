@@ -3,19 +3,20 @@ NexusOps AI — Cluster Service
 Business logic for cluster management and synchronization
 """
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import structlog
 
 from app.models.cluster import (
     Cluster,
-    ClusterNode,
     ClusterStatus,
-    KubernetesNamespace,
+    KubernetesPod,
+    KubernetesService,
     KubernetesWorkload,
 )
 from app.repositories.cluster_repository import ClusterRepository
-from app.schemas.cluster import ClusterCreate, ClusterOut, ClusterUpdate, WorkloadOut
+from app.schemas.cluster import ClusterCreate, ClusterUpdate
 
 logger = structlog.get_logger(__name__)
 
@@ -108,6 +109,13 @@ class ClusterService:
         logger.info("Cluster synced", cluster_id=cluster_id, pod_count=cluster.pod_count)
         return cluster
 
+    async def discover_and_sync_cluster(self, cluster_id: str) -> Cluster:
+        """Run provider-based infrastructure discovery and persist the full topology."""
+        from app.services.infrastructure_discovery_service import InfrastructureDiscoveryService
+
+        discovery = InfrastructureDiscoveryService(repository=self.repo)
+        return await discovery.sync_cluster(cluster_id)
+
     async def update_cluster_status(
         self,
         cluster_id: str,
@@ -127,6 +135,144 @@ class ClusterService:
     ) -> List[KubernetesWorkload]:
         workloads = await self.repo.get_workloads(cluster_id, namespace, skip, limit)
         return list(workloads)
+
+    async def get_deployments(
+        self,
+        cluster_id: str,
+        namespace: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> List[KubernetesWorkload]:
+        workloads = await self.repo.get_workloads(cluster_id, namespace, skip, limit)
+        return [w for w in workloads if w.kind == "Deployment"]
+
+    async def get_namespaces(self, cluster_id: str):
+        return list(await self.repo.get_namespaces(cluster_id))
+
+    async def get_nodes(self, cluster_id: str):
+        return list(await self.repo.get_nodes(cluster_id))
+
+    async def get_pods(
+        self,
+        cluster_id: str,
+        namespace: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 200,
+    ) -> List[KubernetesPod]:
+        return list(await self.repo.get_pods(cluster_id, namespace, skip, limit))
+
+    async def get_services(
+        self,
+        cluster_id: str,
+        namespace: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 200,
+    ) -> List[KubernetesService]:
+        return list(await self.repo.get_services(cluster_id, namespace, skip, limit))
+
+    async def get_replicasets(
+        self,
+        cluster_id: str,
+        namespace: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 200,
+    ):
+        return list(await self.repo.get_replicasets(cluster_id, namespace, skip, limit))
+
+    async def get_topology(self, cluster_id: str) -> Dict[str, Any]:
+        cluster = await self.repo.get_with_topology(cluster_id)
+        if not cluster:
+            return {}
+
+        workload_children = {}
+        for workload in cluster.workloads:
+            workload_children[(workload.namespace_name, workload.name)] = {
+                "id": workload.id,
+                "name": workload.name,
+                "type": workload.kind.lower(),
+                "status": "healthy" if workload.is_healthy else "degraded",
+                "metadata": {
+                    "replicas_ready": workload.replicas_ready,
+                    "replicas_desired": workload.replicas_desired,
+                    "image": workload.image,
+                },
+                "children": [],
+            }
+
+        replicasets_by_name = {(rs.namespace_name, rs.name): rs for rs in cluster.replicasets}
+        for pod in cluster.pods:
+            workload_key = None
+            if pod.workload_id:
+                workload = next((w for w in cluster.workloads if w.id == pod.workload_id), None)
+                if workload:
+                    workload_key = (workload.namespace_name, workload.name)
+            elif pod.owner_kind == "ReplicaSet" and pod.owner_name:
+                owner = replicasets_by_name.get((pod.namespace_name, pod.owner_name))
+                if owner and owner.owner_name:
+                    workload_key = (pod.namespace_name, owner.owner_name)
+
+            pod_node = {
+                "id": pod.id,
+                "name": pod.name,
+                "type": "pod",
+                "status": pod.status,
+                "metadata": {
+                    "phase": pod.phase,
+                    "ready": pod.ready,
+                    "restart_count": pod.restart_count,
+                    "node_name": pod.node_name,
+                },
+                "children": [],
+            }
+            if workload_key and workload_key in workload_children:
+                workload_children[workload_key]["children"].append(pod_node)
+
+        namespace_nodes = []
+        for namespace in cluster.namespaces:
+            children = [
+                node
+                for (namespace_name, _), node in workload_children.items()
+                if namespace_name == namespace.name
+            ]
+            services = [
+                {
+                    "id": service.id,
+                    "name": service.name,
+                    "type": "service",
+                    "status": service.service_type,
+                    "metadata": {"cluster_ip": service.cluster_ip, "ports": service.ports or []},
+                    "children": [],
+                }
+                for service in cluster.services
+                if service.namespace_name == namespace.name
+            ]
+            namespace_nodes.append(
+                {
+                    "id": namespace.id,
+                    "name": namespace.name,
+                    "type": "namespace",
+                    "status": namespace.status,
+                    "metadata": {"services": len(services)},
+                    "children": children + services,
+                }
+            )
+
+        return {
+            "cluster_id": cluster.id,
+            "generated_at": datetime.now(timezone.utc),
+            "root": {
+                "id": cluster.id,
+                "name": cluster.name,
+                "type": "cluster",
+                "status": cluster.status,
+                "metadata": {
+                    "provider": cluster.provider,
+                    "nodes": cluster.node_count,
+                    "version": cluster.kubernetes_version,
+                },
+                "children": namespace_nodes,
+            },
+        }
 
     async def get_cluster_summary(self, cluster_id: str) -> Dict[str, Any]:
         """Get a high-level health and resource summary for dashboard display."""
