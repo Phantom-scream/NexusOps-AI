@@ -207,6 +207,7 @@ Response:
 ## Documentation
 
 - [Architecture Overview](docs/architecture.md)
+- [Infrastructure Discovery](docs/infrastructure-discovery.md)
 - [API Reference](docs/api.md)
 - [Developer Onboarding](docs/onboarding.md)
 - [Deployment Guide](docs/deployment.md)
