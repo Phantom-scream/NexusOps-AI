@@ -14,6 +14,7 @@ celery_app = Celery(
     include=[
         "app.workers.cluster_tasks",
         "app.workers.analysis_tasks",
+        "app.workers.telemetry_tasks",
     ],
 )
 
@@ -44,6 +45,7 @@ celery_app.conf.update(
     task_routes={
         "app.workers.cluster_tasks.*": {"queue": "cluster"},
         "app.workers.analysis_tasks.*": {"queue": "analysis"},
+        "app.workers.telemetry_tasks.*": {"queue": "telemetry"},
     },
     task_default_queue="default",
 
@@ -56,6 +58,10 @@ celery_app.conf.update(
         "detect-anomalies": {
             "task": "app.workers.analysis_tasks.detect_anomalies",
             "schedule": crontab(minute="*/10"),  # Every 10 minutes
+        },
+        "generate-demo-telemetry": {
+            "task": "app.workers.telemetry_tasks.generate_demo_telemetry",
+            "schedule": crontab(minute="*/15"),  # Every 15 minutes
         },
         "generate-cost-report": {
             "task": "app.workers.analysis_tasks.generate_cost_report",

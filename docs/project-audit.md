@@ -121,10 +121,11 @@ The next engineering priority should be converting the dashboard from static moc
 
 ### Phase 5: Observability Pipeline
 
-1. Normalize metrics, logs, traces, and events into backend schemas.
-2. Add Prometheus/Loki query clients.
-3. Surface live service health and incident trend data in the dashboard.
-4. Provision Grafana dashboards used by Docker Compose.
+1. Completed persistent telemetry schemas for metrics, logs, infrastructure events, traces, and telemetry sources.
+2. Completed provider-neutral telemetry ingestion with demo generation plus Prometheus/OpenTelemetry provider scaffolds.
+3. Completed global and cluster-scoped telemetry APIs.
+4. Connected dashboard observability panels to backend telemetry through React Query.
+5. Remaining: implement full Prometheus/Loki query clients and provision Grafana dashboards used by Docker Compose.
 
 ### Phase 6: AI Incident Investigation
 

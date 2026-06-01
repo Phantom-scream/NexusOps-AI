@@ -55,6 +55,21 @@ class ClusterRepository(BaseRepository[Cluster]):
         )
         return result.scalars().all()
 
+    async def get_active_clusters_with_topology(self) -> Sequence[Cluster]:
+        result = await self.session.execute(
+            select(Cluster)
+            .where(Cluster.is_active == True)
+            .options(
+                selectinload(Cluster.nodes),
+                selectinload(Cluster.namespaces),
+                selectinload(Cluster.workloads),
+                selectinload(Cluster.pods),
+                selectinload(Cluster.services),
+            )
+            .order_by(Cluster.name)
+        )
+        return result.scalars().all()
+
     async def get_workloads(
         self,
         cluster_id: str,
