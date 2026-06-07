@@ -1,0 +1,40 @@
+{
+  "projectName": "NexusOps AI Command Center",
+  "projectId": "17469866534806598593",
+  "mcpPackage": "@_davideast/stitch-mcp",
+  "artifactPath": "docs/design/stitch",
+  "screens": [
+    {
+      "name": "Design System",
+      "id": "asset-stub-assets_e051e508e5a84e8ba0c7c641a86d96e3"
+    },
+    {
+      "name": "NexusOps AI Dashboard",
+      "id": "35a0dbf9a0a447f8a591771c5c645eab"
+    },
+    {
+      "name": "Infrastructure Topology",
+      "id": "da7c2de909f546468114091523b22828"
+    },
+    {
+      "name": "Incident Management",
+      "id": "5196579391524ba19ac76b60a9772dcd"
+    },
+    {
+      "name": "AI Investigation Center",
+      "id": "25f36bacc55f4eb18b82ec035ae1dede"
+    },
+    {
+      "name": "Observability Suite",
+      "id": "cd4a8c6639e6411d861e3e9ccdac2125"
+    },
+    {
+      "name": "Infrastructure Security",
+      "id": "6261ac6edba94c139c9694ec4d50f518"
+    },
+    {
+      "name": "Cost Optimization",
+      "id": "0f1443a1b1d54372ae1054ef94f4fe49"
+    }
+  ]
+}
