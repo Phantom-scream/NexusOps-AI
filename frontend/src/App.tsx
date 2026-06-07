@@ -6,6 +6,8 @@ import Incidents from '@/pages/Incidents'
 import Security from '@/pages/Security'
 import CostOptimization from '@/pages/CostOptimization'
 import AIInvestigation from '@/pages/AIInvestigation'
+import Observability from '@/pages/Observability'
+import Settings from '@/pages/Settings'
 import Login from '@/pages/Login'
 import { useAuthStore } from '@/store/authStore'
 
@@ -31,10 +33,12 @@ export default function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="clusters" element={<Clusters />} />
+          <Route path="observability" element={<Observability />} />
           <Route path="incidents" element={<Incidents />} />
           <Route path="security" element={<Security />} />
           <Route path="cost" element={<CostOptimization />} />
           <Route path="ai" element={<AIInvestigation />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>

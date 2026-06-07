@@ -9,10 +9,12 @@ import { mockSummary } from '@/data/mock'
 const routeLabels: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/clusters': 'Infrastructure',
+  '/observability': 'Observability',
   '/incidents': 'Incidents',
   '/security': 'Security',
   '/cost': 'Cost Optimization',
   '/ai': 'AI Investigation',
+  '/settings': 'Settings',
 }
 
 export default function TopBar() {
@@ -35,7 +37,7 @@ export default function TopBar() {
   }
 
   return (
-    <header className="h-14 flex items-center gap-3 px-5 border-b border-white/[0.05] bg-surface-100/80 backdrop-blur-sm flex-shrink-0">
+    <header className="h-14 flex items-center gap-3 px-5 border-b border-white/[0.08] bg-surface-100/72 backdrop-blur-xl flex-shrink-0">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs text-gray-500 flex-shrink-0">
         <span className="text-gray-600">NexusOps</span>
@@ -56,13 +58,13 @@ export default function TopBar() {
           placeholder="Search clusters, incidents, resources…"
           onFocus={() => setSearchFocused(true)}
           onBlur={() => setSearchFocused(false)}
-          className="w-full bg-surface-200 border border-white/[0.05] text-gray-300 placeholder-gray-600 rounded-lg pl-9 pr-4 py-1.5 text-xs focus:outline-none focus:border-brand-500/50 focus:bg-surface-300 transition-all"
+          className="w-full bg-surface-200/70 border border-white/[0.08] text-gray-300 placeholder-gray-600 rounded-lg pl-9 pr-4 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-300/20 focus:border-cyan-300/40 focus:bg-surface-300/80 transition-all"
         />
       </div>
 
       <div className="flex items-center gap-1.5 ml-auto">
         {/* System health chip */}
-        <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 mr-1">
+        <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 mr-1 shadow-[0_0_24px_rgba(16,185,129,0.08)]">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-[11px] text-emerald-400 font-medium whitespace-nowrap">
             {mockSummary.healthyClusters}/{mockSummary.totalClusters} clusters
@@ -87,9 +89,9 @@ export default function TopBar() {
         </button>
 
         {/* User */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-200 border border-white/[0.05] ml-1">
-          <div className="w-5 h-5 rounded-full bg-brand-600/30 border border-brand-500/30 flex items-center justify-center">
-            <User className="w-3 h-3 text-brand-400" />
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-200/75 border border-white/[0.08] ml-1">
+          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-brand-500/50 to-cyan-400/40 border border-cyan-300/20 flex items-center justify-center">
+            <User className="w-3 h-3 text-cyan-200" />
           </div>
           <span className="text-xs text-gray-300 hidden sm:block max-w-[120px] truncate">{email}</span>
           {role && <Badge value={role} size="xs" />}

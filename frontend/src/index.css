@@ -4,10 +4,22 @@
 
 @layer base {
   :root {
-    --color-bg: #0f1117;
+    color-scheme: dark;
+    --color-bg: #070a12;
+    --surface-1: rgba(13, 19, 32, 0.86);
+    --surface-2: rgba(18, 26, 43, 0.82);
+    --surface-3: rgba(24, 34, 56, 0.78);
+    --border-subtle: rgba(148, 163, 184, 0.14);
+    --border-strong: rgba(148, 163, 184, 0.24);
+    --brand: #6d5dfb;
+    --cyan: #22d3ee;
   }
   body {
-    @apply bg-surface text-gray-100 font-sans;
+    @apply bg-surface text-gray-100 font-sans antialiased;
+    background:
+      radial-gradient(circle at top left, rgba(109, 93, 251, 0.2), transparent 32rem),
+      radial-gradient(circle at top right, rgba(34, 211, 238, 0.12), transparent 28rem),
+      linear-gradient(180deg, #070a12 0%, #0a0f1d 48%, #070a12 100%);
   }
   * {
     @apply border-gray-700/50;
@@ -28,7 +40,15 @@
 
 @layer components {
   .card {
-    @apply bg-surface-100 border border-gray-700/50 rounded-xl;
+    @apply bg-surface-100/80 border border-white/[0.08] rounded-xl backdrop-blur-xl;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
+  }
+  .glass-panel {
+    @apply bg-surface-100/80 border border-white/[0.08] rounded-xl backdrop-blur-xl;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
+  }
+  .command-panel {
+    @apply bg-surface-200/70 border border-white/[0.06] rounded-lg backdrop-blur-xl;
   }
   .badge {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
@@ -43,19 +63,29 @@
     @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply btn bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-900/30;
+    @apply btn bg-gradient-to-r from-brand-500 to-cyan-400 hover:brightness-110 text-white;
+    box-shadow: 0 0 32px rgba(34, 211, 238, 0.18);
   }
   .btn-secondary {
-    @apply btn bg-surface-300 hover:bg-surface-400 text-gray-200 border border-gray-600;
+    @apply btn bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border border-white/[0.08] hover:border-white/[0.16];
   }
   .btn-danger {
     @apply btn bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30;
   }
   .input {
-    @apply w-full bg-surface-200 border border-gray-600 text-gray-100 placeholder-gray-500
-           rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-colors;
+    @apply w-full bg-surface-200/80 border border-white/[0.08] text-gray-100 placeholder-gray-600
+           rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300/20 focus:border-cyan-300/40 transition-colors;
   }
   .stat-card {
     @apply card p-5 flex flex-col gap-1;
+  }
+}
+
+@layer utilities {
+  .shadow-panel {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
+  }
+  .shadow-glow {
+    box-shadow: 0 0 32px rgba(34, 211, 238, 0.18);
   }
 }

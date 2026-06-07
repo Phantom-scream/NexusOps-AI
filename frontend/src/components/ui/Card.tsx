@@ -15,9 +15,11 @@ export function Card({ children, className, hover, glow, as: Tag = 'div', onClic
     <Tag
       onClick={onClick}
       className={clsx(
-        'bg-surface-100 border border-white/[0.06] rounded-xl',
-        (hover || onClick) && 'transition-all duration-200 hover:border-white/[0.1] hover:bg-surface-200 cursor-pointer',
-        glow && 'shadow-lg shadow-brand-900/20',
+        'relative overflow-hidden bg-surface-100/80 border border-white/[0.08] rounded-xl shadow-panel backdrop-blur-xl',
+        'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent',
+        (hover || onClick)
+          && 'transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300/20 hover:bg-surface-200/85 hover:shadow-glow cursor-pointer',
+        glow && 'shadow-glow',
         className,
       )}
     >
@@ -36,10 +38,10 @@ interface CardHeaderProps {
 
 export function CardHeader({ title, subtitle, actions, icon, className }: CardHeaderProps) {
   return (
-    <div className={clsx('flex items-center justify-between px-5 py-4 border-b border-white/[0.05]', className)}>
+    <div className={clsx('flex items-center justify-between px-5 py-4 border-b border-white/[0.07] bg-white/[0.015]', className)}>
       <div className="flex items-center gap-3 min-w-0">
         {icon && (
-          <div className="w-7 h-7 rounded-lg bg-surface-300 flex items-center justify-center text-gray-400 flex-shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-cyan-300 flex-shrink-0">
             {icon}
           </div>
         )}
