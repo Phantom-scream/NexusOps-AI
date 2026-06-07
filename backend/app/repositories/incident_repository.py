@@ -1,7 +1,7 @@
 """
 NexusOps AI — Incident Repository
 """
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -12,7 +12,7 @@ from app.repositories.base import BaseRepository
 
 class IncidentRepository(BaseRepository[Incident]):
 
-    async def get_with_analyses(self, incident_id: str) -> Optional[Incident]:
+    async def get_with_analyses(self, incident_id: str) -> Incident | None:
         result = await self.session.execute(
             select(Incident)
             .where(Incident.id == incident_id)
@@ -23,8 +23,8 @@ class IncidentRepository(BaseRepository[Incident]):
     async def get_by_cluster(
         self,
         cluster_id: str,
-        status: Optional[str] = None,
-        severity: Optional[str] = None,
+        status: str | None = None,
+        severity: str | None = None,
         skip: int = 0,
         limit: int = 50,
     ) -> Sequence[Incident]:

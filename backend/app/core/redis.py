@@ -2,7 +2,6 @@
 NexusOps AI — Redis Client
 Async Redis connection with connection pooling
 """
-from typing import Optional
 
 import redis.asyncio as aioredis
 import structlog
@@ -11,7 +10,7 @@ from app.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
-_redis_client: Optional[aioredis.Redis] = None
+_redis_client: aioredis.Redis | None = None
 
 
 async def get_redis() -> aioredis.Redis:
@@ -45,7 +44,7 @@ class CacheService:
     def __init__(self, redis_client: aioredis.Redis):
         self._redis = redis_client
 
-    async def get(self, key: str) -> Optional[str]:
+    async def get(self, key: str) -> str | None:
         return await self._redis.get(key)
 
     async def set(self, key: str, value: str, ttl: int = 300) -> None:

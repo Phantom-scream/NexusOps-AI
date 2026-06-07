@@ -2,17 +2,17 @@
 NexusOps AI — RAG (Retrieval-Augmented Generation) Pipeline
 Vector search over indexed infrastructure knowledge
 """
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.models import (
     Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
     PointStruct,
     VectorParams,
-    Filter,
-    FieldCondition,
-    MatchValue,
 )
 
 from app.ai.llm_client import llm_client
@@ -27,7 +27,7 @@ EMBEDDING_DIM = 1536  # text-embedding-ada-002 dimension
 class RAGPipeline:
     """
     RAG pipeline using Qdrant for vector storage and similarity search.
-    
+
     Indexes:
     - Past incident reports
     - Kubernetes manifests
@@ -36,7 +36,7 @@ class RAGPipeline:
     """
 
     def __init__(self):
-        self._client: Optional[AsyncQdrantClient] = None
+        self._client: AsyncQdrantClient | None = None
 
     async def _get_client(self) -> AsyncQdrantClient:
         if self._client is None:
@@ -73,7 +73,7 @@ class RAGPipeline:
         self,
         incident_id: str,
         content: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Index an incident report into the vector store."""
         try:
@@ -105,7 +105,7 @@ class RAGPipeline:
         doc_id: str,
         content: str,
         doc_type: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Index infrastructure documents (manifests, Terraform, runbooks)."""
         try:
@@ -145,7 +145,7 @@ class RAGPipeline:
         query: str,
         limit: int = 5,
         score_threshold: float = 0.70,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search past incidents by semantic similarity."""
         try:
             client = await self._get_client()
@@ -176,10 +176,10 @@ class RAGPipeline:
     async def search_infrastructure(
         self,
         query: str,
-        doc_type: Optional[str] = None,
+        doc_type: str | None = None,
         limit: int = 5,
         score_threshold: float = 0.65,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search infrastructure documents by semantic similarity."""
         try:
             client = await self._get_client()
@@ -214,7 +214,7 @@ class RAGPipeline:
             logger.warning("Infrastructure vector search failed", error=str(exc))
             return []
 
-    async def rag_query(self, query: str) -> Dict[str, Any]:
+    async def rag_query(self, query: str) -> dict[str, Any]:
         """
         Full RAG Q&A: retrieve relevant docs, then generate an LLM answer.
         """
@@ -250,7 +250,7 @@ class RAGPipeline:
             "tokens_used": response.get("tokens_used"),
         }
 
-    def _chunk_text(self, text: str, chunk_size: int = 1000) -> List[str]:
+    def _chunk_text(self, text: str, chunk_size: int = 1000) -> list[str]:
         """Split text into overlapping chunks."""
         words = text.split()
         chunks = []

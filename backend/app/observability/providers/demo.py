@@ -1,9 +1,9 @@
 """Demo telemetry provider using the same persistence model as real telemetry."""
 
-from datetime import datetime, timedelta, timezone
+from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
 from hashlib import sha1
 from random import Random
-from typing import Sequence
 from uuid import uuid4
 
 from app.models.cluster import Cluster, KubernetesPod, KubernetesWorkload
@@ -16,7 +16,7 @@ class DemoTelemetryProvider:
     source_type = "demo"
 
     def collect(self, clusters: Sequence[Cluster], source_id: str) -> TelemetrySnapshot:
-        now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+        now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
         snapshot = TelemetrySnapshot()
 
         for cluster in clusters:

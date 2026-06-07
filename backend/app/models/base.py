@@ -3,7 +3,7 @@ NexusOps AI — Base Model Mixin
 Common fields and behaviors for all ORM models
 """
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column

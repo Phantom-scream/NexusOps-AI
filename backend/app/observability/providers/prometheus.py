@@ -4,7 +4,7 @@ The provider contract is implemented now so real Prometheus ingestion can be
 enabled by configuration without changing service or API consumers.
 """
 
-from typing import Sequence
+from collections.abc import Sequence
 
 from app.models.cluster import Cluster
 from app.observability.providers.base import TelemetrySnapshot

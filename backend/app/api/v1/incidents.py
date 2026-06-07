@@ -1,7 +1,6 @@
 """
 NexusOps AI — Incidents API
 """
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,9 +32,9 @@ def get_incident_service(db: AsyncSession = Depends(get_db)) -> IncidentService:
 async def list_incidents(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    severity: Optional[str] = Query(default=None),
-    status: Optional[str] = Query(default=None, alias="status"),
-    cluster_id: Optional[str] = Query(default=None),
+    severity: str | None = Query(default=None),
+    status: str | None = Query(default=None, alias="status"),
+    cluster_id: str | None = Query(default=None),
     service: IncidentService = Depends(get_incident_service),
     _: CurrentUser = Depends(get_current_user),
 ):

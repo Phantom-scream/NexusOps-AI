@@ -2,7 +2,8 @@
 NexusOps AI — Base Repository
 Generic CRUD operations using the Repository pattern
 """
-from typing import Any, Dict, Generic, List, Optional, Sequence, Type, TypeVar
+from collections.abc import Sequence
+from typing import Any, Generic, TypeVar
 
 import structlog
 from sqlalchemy import func, select
@@ -21,11 +22,11 @@ class BaseRepository(Generic[ModelT]):
     Subclass this for domain-specific repositories.
     """
 
-    def __init__(self, model: Type[ModelT], session: AsyncSession):
+    def __init__(self, model: type[ModelT], session: AsyncSession):
         self.model = model
         self.session = session
 
-    async def get(self, id: str) -> Optional[ModelT]:
+    async def get(self, id: str) -> ModelT | None:
         """Fetch a single record by primary key."""
         result = await self.session.get(self.model, id)
         return result
@@ -34,7 +35,7 @@ class BaseRepository(Generic[ModelT]):
         self,
         skip: int = 0,
         limit: int = 50,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
     ) -> Sequence[ModelT]:
         """Fetch paginated list of records with optional equality filters."""
         stmt = select(self.model)
@@ -48,7 +49,7 @@ class BaseRepository(Generic[ModelT]):
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def count(self, filters: Optional[Dict[str, Any]] = None) -> int:
+    async def count(self, filters: dict[str, Any] | None = None) -> int:
         """Count records with optional filters."""
         stmt = select(func.count()).select_from(self.model)
 
@@ -67,7 +68,7 @@ class BaseRepository(Generic[ModelT]):
         await self.session.refresh(obj)
         return obj
 
-    async def update(self, obj: ModelT, updates: Dict[str, Any]) -> ModelT:
+    async def update(self, obj: ModelT, updates: dict[str, Any]) -> ModelT:
         """Apply field updates to an existing record."""
         for field, value in updates.items():
             if hasattr(obj, field) and value is not None:

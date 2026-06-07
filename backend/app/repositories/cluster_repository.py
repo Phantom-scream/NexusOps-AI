@@ -1,7 +1,7 @@
 """
 NexusOps AI — Cluster Repository
 """
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
@@ -20,13 +20,13 @@ from app.repositories.base import BaseRepository
 
 class ClusterRepository(BaseRepository[Cluster]):
 
-    async def get_by_name(self, name: str) -> Optional[Cluster]:
+    async def get_by_name(self, name: str) -> Cluster | None:
         result = await self.session.execute(
             select(Cluster).where(Cluster.name == name)
         )
         return result.scalar_one_or_none()
 
-    async def get_with_nodes(self, cluster_id: str) -> Optional[Cluster]:
+    async def get_with_nodes(self, cluster_id: str) -> Cluster | None:
         result = await self.session.execute(
             select(Cluster)
             .where(Cluster.id == cluster_id)
@@ -34,7 +34,7 @@ class ClusterRepository(BaseRepository[Cluster]):
         )
         return result.scalar_one_or_none()
 
-    async def get_with_topology(self, cluster_id: str) -> Optional[Cluster]:
+    async def get_with_topology(self, cluster_id: str) -> Cluster | None:
         result = await self.session.execute(
             select(Cluster)
             .where(Cluster.id == cluster_id)
@@ -51,14 +51,14 @@ class ClusterRepository(BaseRepository[Cluster]):
 
     async def get_active_clusters(self) -> Sequence[Cluster]:
         result = await self.session.execute(
-            select(Cluster).where(Cluster.is_active == True).order_by(Cluster.name)
+            select(Cluster).where(Cluster.is_active.is_(True)).order_by(Cluster.name)
         )
         return result.scalars().all()
 
     async def get_active_clusters_with_topology(self) -> Sequence[Cluster]:
         result = await self.session.execute(
             select(Cluster)
-            .where(Cluster.is_active == True)
+            .where(Cluster.is_active.is_(True))
             .options(
                 selectinload(Cluster.nodes),
                 selectinload(Cluster.namespaces),
@@ -73,7 +73,7 @@ class ClusterRepository(BaseRepository[Cluster]):
     async def get_workloads(
         self,
         cluster_id: str,
-        namespace: Optional[str] = None,
+        namespace: str | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> Sequence[KubernetesWorkload]:
@@ -101,7 +101,7 @@ class ClusterRepository(BaseRepository[Cluster]):
     async def get_pods(
         self,
         cluster_id: str,
-        namespace: Optional[str] = None,
+        namespace: str | None = None,
         skip: int = 0,
         limit: int = 200,
     ) -> Sequence[KubernetesPod]:
@@ -115,7 +115,7 @@ class ClusterRepository(BaseRepository[Cluster]):
     async def get_services(
         self,
         cluster_id: str,
-        namespace: Optional[str] = None,
+        namespace: str | None = None,
         skip: int = 0,
         limit: int = 200,
     ) -> Sequence[KubernetesService]:
@@ -129,7 +129,7 @@ class ClusterRepository(BaseRepository[Cluster]):
     async def get_replicasets(
         self,
         cluster_id: str,
-        namespace: Optional[str] = None,
+        namespace: str | None = None,
         skip: int = 0,
         limit: int = 200,
     ) -> Sequence[KubernetesReplicaSet]:

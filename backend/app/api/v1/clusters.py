@@ -1,7 +1,6 @@
 """
 NexusOps AI — Clusters API
 """
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,8 +13,8 @@ from app.schemas.cluster import (
     ClusterCreate,
     ClusterDetailOut,
     ClusterListResponse,
-    ClusterOut,
     ClusterNodeOut,
+    ClusterOut,
     ClusterTopologyOut,
     ClusterUpdate,
     NamespaceOut,
@@ -66,7 +65,7 @@ async def register_cluster(
         cluster = await service.register_cluster(data)
         return ClusterOut.model_validate(cluster)
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/{cluster_id}", response_model=ClusterDetailOut)
@@ -161,7 +160,7 @@ async def get_cluster_nodes(
 @router.get("/{cluster_id}/deployments", response_model=list[WorkloadOut])
 async def get_cluster_deployments(
     cluster_id: str,
-    namespace: Optional[str] = Query(default=None),
+    namespace: str | None = Query(default=None),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, le=200),
     service: ClusterService = Depends(get_cluster_service),
@@ -178,7 +177,7 @@ async def get_cluster_deployments(
 @router.get("/{cluster_id}/workloads", response_model=list[WorkloadOut])
 async def get_cluster_workloads(
     cluster_id: str,
-    namespace: Optional[str] = Query(default=None),
+    namespace: str | None = Query(default=None),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, le=200),
     service: ClusterService = Depends(get_cluster_service),
@@ -195,7 +194,7 @@ async def get_cluster_workloads(
 @router.get("/{cluster_id}/pods", response_model=list[PodOut])
 async def get_cluster_pods(
     cluster_id: str,
-    namespace: Optional[str] = Query(default=None),
+    namespace: str | None = Query(default=None),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, le=500),
     service: ClusterService = Depends(get_cluster_service),
@@ -212,7 +211,7 @@ async def get_cluster_pods(
 @router.get("/{cluster_id}/services", response_model=list[ServiceOut])
 async def get_cluster_services(
     cluster_id: str,
-    namespace: Optional[str] = Query(default=None),
+    namespace: str | None = Query(default=None),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, le=500),
     service: ClusterService = Depends(get_cluster_service),
@@ -229,7 +228,7 @@ async def get_cluster_services(
 @router.get("/{cluster_id}/replicasets", response_model=list[ReplicaSetOut])
 async def get_cluster_replicasets(
     cluster_id: str,
-    namespace: Optional[str] = Query(default=None),
+    namespace: str | None = Query(default=None),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, le=500),
     service: ClusterService = Depends(get_cluster_service),

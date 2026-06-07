@@ -3,8 +3,7 @@ NexusOps AI — Incident Service
 Business logic for incident lifecycle management
 """
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -51,18 +50,18 @@ class IncidentService:
         )
         return created
 
-    async def get_incident(self, incident_id: str) -> Optional[Incident]:
+    async def get_incident(self, incident_id: str) -> Incident | None:
         return await self.repo.get_with_analyses(incident_id)
 
     async def list_incidents(
         self,
         skip: int = 0,
         limit: int = 50,
-        severity: Optional[str] = None,
-        status: Optional[str] = None,
-        cluster_id: Optional[str] = None,
-    ) -> tuple[List[Incident], int]:
-        filters: Dict[str, Any] = {}
+        severity: str | None = None,
+        status: str | None = None,
+        cluster_id: str | None = None,
+    ) -> tuple[list[Incident], int]:
+        filters: dict[str, Any] = {}
         if severity:
             filters["severity"] = severity
         if status:
@@ -76,14 +75,14 @@ class IncidentService:
 
     async def update_incident(
         self, incident_id: str, data: IncidentUpdate
-    ) -> Optional[Incident]:
+    ) -> Incident | None:
         incident = await self.repo.get(incident_id)
         if not incident:
             return None
         updates = data.model_dump(exclude_none=True)
         return await self.repo.update(incident, updates)
 
-    async def resolve_incident(self, incident_id: str, resolved_by: str) -> Optional[Incident]:
+    async def resolve_incident(self, incident_id: str, resolved_by: str) -> Incident | None:
         incident = await self.repo.get(incident_id)
         if not incident:
             return None
@@ -96,7 +95,7 @@ class IncidentService:
         self,
         incident_id: str,
         query: str,
-        analysis_result: Dict[str, Any],
+        analysis_result: dict[str, Any],
     ) -> IncidentAnalysis:
         """Persist an AI analysis result and update the incident's root cause."""
         analysis = IncidentAnalysis(
@@ -126,7 +125,7 @@ class IncidentService:
         logger.info("Analysis saved", incident_id=incident_id, confidence=analysis.confidence_score)
         return saved
 
-    async def get_dashboard_stats(self) -> Dict[str, Any]:
+    async def get_dashboard_stats(self) -> dict[str, Any]:
         """Stats for the incident dashboard."""
         total = await self.repo.count()
         open_count = await self.repo.count({"status": "open"})

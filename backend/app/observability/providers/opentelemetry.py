@@ -1,6 +1,6 @@
 """OpenTelemetry provider scaffold for trace ingestion."""
 
-from typing import Sequence
+from collections.abc import Sequence
 
 from app.models.cluster import Cluster
 from app.observability.providers.base import TelemetrySnapshot

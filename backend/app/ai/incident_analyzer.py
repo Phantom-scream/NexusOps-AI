@@ -4,7 +4,7 @@ Flagship AI capability: correlates K8s events, logs, and metrics to identify roo
 """
 import json
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -21,7 +21,7 @@ logger = structlog.get_logger(__name__)
 class IncidentInvestigationEngine:
     """
     Core AI engine for infrastructure incident root cause analysis.
-    
+
     Pipeline:
     1. Gather telemetry context (K8s events, logs, metrics)
     2. Retrieve similar past incidents via RAG
@@ -29,24 +29,24 @@ class IncidentInvestigationEngine:
     4. Parse and return structured findings
     """
 
-    def __init__(self, rag_pipeline: Optional[RAGPipeline] = None):
+    def __init__(self, rag_pipeline: RAGPipeline | None = None):
         self.rag = rag_pipeline or RAGPipeline()
 
     async def investigate(
         self,
         cluster_name: str,
         query: str,
-        namespace: Optional[str] = None,
-        workload: Optional[str] = None,
+        namespace: str | None = None,
+        workload: str | None = None,
         context_window_minutes: int = 60,
-        k8s_events: Optional[List[Dict]] = None,
-        pod_logs: Optional[str] = None,
-        metrics: Optional[Dict] = None,
-        recent_changes: Optional[List[Dict]] = None,
-    ) -> Dict[str, Any]:
+        k8s_events: list[dict] | None = None,
+        pod_logs: str | None = None,
+        metrics: dict | None = None,
+        recent_changes: list[dict] | None = None,
+    ) -> dict[str, Any]:
         """
         Run the full AI incident investigation pipeline.
-        
+
         Returns structured analysis with root cause, contributing factors,
         remediation steps, and confidence score.
         """
@@ -117,7 +117,7 @@ class IncidentInvestigationEngine:
 
         return result
 
-    def _format_k8s_events(self, events: List[Dict]) -> str:
+    def _format_k8s_events(self, events: list[dict]) -> str:
         if not events:
             return "No Kubernetes events in the specified time window."
 
@@ -130,7 +130,7 @@ class IncidentInvestigationEngine:
             )
         return "\n".join(lines)
 
-    def _format_metrics(self, metrics: Dict) -> str:
+    def _format_metrics(self, metrics: dict) -> str:
         if not metrics:
             return "No metrics data available."
 
@@ -139,7 +139,7 @@ class IncidentInvestigationEngine:
             lines.append(f"{metric_name}: {value}")
         return "\n".join(lines)
 
-    def _format_changes(self, changes: List[Dict]) -> str:
+    def _format_changes(self, changes: list[dict]) -> str:
         if not changes:
             return "No recent infrastructure changes detected."
 
@@ -151,7 +151,7 @@ class IncidentInvestigationEngine:
             )
         return "\n".join(lines)
 
-    def _parse_llm_response(self, content: str) -> Dict[str, Any]:
+    def _parse_llm_response(self, content: str) -> dict[str, Any]:
         """Parse JSON from LLM response, with graceful fallback."""
         try:
             # Extract JSON from markdown code blocks if present
@@ -179,7 +179,7 @@ class IncidentInvestigationEngine:
                 "evidence": [],
             }
 
-    def _build_source_list(self, **kwargs: bool) -> List[str]:
+    def _build_source_list(self, **kwargs: bool) -> list[str]:
         sources = []
         if kwargs.get("has_k8s_events"):
             sources.append("kubernetes_events")

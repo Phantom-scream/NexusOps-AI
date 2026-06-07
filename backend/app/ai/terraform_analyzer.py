@@ -4,7 +4,7 @@ AI-powered analysis of Terraform configurations for security risks and drift
 """
 import json
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -31,9 +31,9 @@ class TerraformAnalyzer:
         self,
         terraform_content: str,
         scan_name: str,
-        repo_url: Optional[str] = None,
-        opa_violations: Optional[List[Dict]] = None,
-    ) -> Dict[str, Any]:
+        repo_url: str | None = None,
+        opa_violations: list[dict] | None = None,
+    ) -> dict[str, Any]:
         """
         Run AI security analysis on Terraform configuration.
         Returns structured findings with severity, category, and remediation.
@@ -72,7 +72,7 @@ class TerraformAnalyzer:
 
         return result
 
-    def _heuristic_scan(self, content: str) -> List[Dict]:
+    def _heuristic_scan(self, content: str) -> list[dict]:
         """
         Fast regex-based heuristic scan for obvious security issues.
         These run before the AI analysis and are always reported.
@@ -142,7 +142,7 @@ class TerraformAnalyzer:
 
         return findings
 
-    def _format_opa_violations(self, violations: List[Dict]) -> str:
+    def _format_opa_violations(self, violations: list[dict]) -> str:
         if not violations:
             return "No OPA policy violations reported."
         return "\n".join([
@@ -150,7 +150,7 @@ class TerraformAnalyzer:
             for v in violations
         ])
 
-    def _parse_llm_response(self, content: str) -> Dict[str, Any]:
+    def _parse_llm_response(self, content: str) -> dict[str, Any]:
         try:
             json_match = re.search(r"```(?:json)?\n(.*?)\n```", content, re.DOTALL)
             if json_match:

@@ -5,7 +5,7 @@ Request ID injection, rate limiting
 import time
 import uuid
 from collections import defaultdict
-from typing import Callable
+from collections.abc import Callable
 
 import structlog
 from fastapi import Request, Response

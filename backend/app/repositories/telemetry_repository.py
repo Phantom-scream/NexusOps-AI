@@ -1,6 +1,6 @@
 """Repository for telemetry persistence and retrieval."""
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import delete, func, select
 
@@ -11,7 +11,7 @@ from app.repositories.base import BaseRepository
 class TelemetryRepository(BaseRepository[TelemetrySource]):
     """Data access helpers for metrics, logs, events, traces, and sources."""
 
-    async def get_source_by_name(self, name: str) -> Optional[TelemetrySource]:
+    async def get_source_by_name(self, name: str) -> TelemetrySource | None:
         result = await self.session.execute(select(TelemetrySource).where(TelemetrySource.name == name))
         return result.scalar_one_or_none()
 
@@ -19,9 +19,9 @@ class TelemetryRepository(BaseRepository[TelemetrySource]):
         self,
         name: str,
         source_type: str,
-        endpoint_url: Optional[str] = None,
-        cluster_id: Optional[str] = None,
-        config: Optional[dict] = None,
+        endpoint_url: str | None = None,
+        cluster_id: str | None = None,
+        config: dict | None = None,
     ) -> TelemetrySource:
         source = await self.get_source_by_name(name)
         if not source:
@@ -72,20 +72,20 @@ class TelemetryRepository(BaseRepository[TelemetrySource]):
     async def list_sources(self, active_only: bool = True) -> Sequence[TelemetrySource]:
         stmt = select(TelemetrySource).order_by(TelemetrySource.name)
         if active_only:
-            stmt = stmt.where(TelemetrySource.is_active == True)
+            stmt = stmt.where(TelemetrySource.is_active.is_(True))
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
     async def list_metrics(
         self,
         *,
-        cluster_id: Optional[str] = None,
-        metric_name: Optional[str] = None,
-        namespace_name: Optional[str] = None,
-        deployment_name: Optional[str] = None,
-        pod_name: Optional[str] = None,
-        service_name: Optional[str] = None,
-        incident_id: Optional[str] = None,
+        cluster_id: str | None = None,
+        metric_name: str | None = None,
+        namespace_name: str | None = None,
+        deployment_name: str | None = None,
+        pod_name: str | None = None,
+        service_name: str | None = None,
+        incident_id: str | None = None,
         limit: int = 500,
     ) -> Sequence[Metric]:
         stmt = select(Metric)
@@ -108,13 +108,13 @@ class TelemetryRepository(BaseRepository[TelemetrySource]):
     async def list_logs(
         self,
         *,
-        cluster_id: Optional[str] = None,
-        severity: Optional[str] = None,
-        namespace_name: Optional[str] = None,
-        deployment_name: Optional[str] = None,
-        pod_name: Optional[str] = None,
-        service_name: Optional[str] = None,
-        incident_id: Optional[str] = None,
+        cluster_id: str | None = None,
+        severity: str | None = None,
+        namespace_name: str | None = None,
+        deployment_name: str | None = None,
+        pod_name: str | None = None,
+        service_name: str | None = None,
+        incident_id: str | None = None,
         limit: int = 200,
     ) -> Sequence[LogEntry]:
         stmt = select(LogEntry)
@@ -137,14 +137,14 @@ class TelemetryRepository(BaseRepository[TelemetrySource]):
     async def list_events(
         self,
         *,
-        cluster_id: Optional[str] = None,
-        severity: Optional[str] = None,
-        resource_type: Optional[str] = None,
-        namespace_name: Optional[str] = None,
-        deployment_name: Optional[str] = None,
-        pod_name: Optional[str] = None,
-        service_name: Optional[str] = None,
-        incident_id: Optional[str] = None,
+        cluster_id: str | None = None,
+        severity: str | None = None,
+        resource_type: str | None = None,
+        namespace_name: str | None = None,
+        deployment_name: str | None = None,
+        pod_name: str | None = None,
+        service_name: str | None = None,
+        incident_id: str | None = None,
         limit: int = 200,
     ) -> Sequence[InfrastructureEvent]:
         stmt = select(InfrastructureEvent)
@@ -169,11 +169,11 @@ class TelemetryRepository(BaseRepository[TelemetrySource]):
     async def list_traces(
         self,
         *,
-        cluster_id: Optional[str] = None,
-        namespace_name: Optional[str] = None,
-        deployment_name: Optional[str] = None,
-        pod_name: Optional[str] = None,
-        incident_id: Optional[str] = None,
+        cluster_id: str | None = None,
+        namespace_name: str | None = None,
+        deployment_name: str | None = None,
+        pod_name: str | None = None,
+        incident_id: str | None = None,
         limit: int = 200,
     ) -> Sequence[Trace]:
         stmt = select(Trace)
@@ -191,7 +191,7 @@ class TelemetryRepository(BaseRepository[TelemetrySource]):
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def summary(self, cluster_id: Optional[str] = None) -> dict:
+    async def summary(self, cluster_id: str | None = None) -> dict:
         filters = []
         if cluster_id:
             filters.append(lambda model: model.cluster_id == cluster_id)
@@ -227,12 +227,12 @@ class TelemetryRepository(BaseRepository[TelemetrySource]):
         stmt,
         model,
         *,
-        cluster_id: Optional[str],
-        namespace_name: Optional[str],
-        deployment_name: Optional[str],
-        pod_name: Optional[str],
-        service_name: Optional[str],
-        incident_id: Optional[str],
+        cluster_id: str | None,
+        namespace_name: str | None,
+        deployment_name: str | None,
+        pod_name: str | None,
+        service_name: str | None,
+        incident_id: str | None,
     ):
         if cluster_id:
             stmt = stmt.where(model.cluster_id == cluster_id)

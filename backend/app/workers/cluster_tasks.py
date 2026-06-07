@@ -3,7 +3,6 @@ NexusOps AI — Cluster Sync Celery Tasks
 Periodic tasks to keep cluster state fresh
 """
 import asyncio
-from typing import Optional
 
 import structlog
 
@@ -43,9 +42,9 @@ def sync_all_active_clusters(self) -> dict:
 
 async def _sync_cluster_async(cluster_id: str) -> dict:
     from app.core.database import AsyncSessionLocal
+    from app.models.cluster import ClusterStatus
     from app.repositories.cluster_repository import ClusterRepository
     from app.services.infrastructure_discovery_service import InfrastructureDiscoveryService
-    from app.models.cluster import ClusterStatus
 
     logger.info("Starting cluster sync", cluster_id=cluster_id)
 
@@ -79,8 +78,8 @@ async def _sync_cluster_async(cluster_id: str) -> dict:
 
 async def _sync_all_clusters_async() -> dict:
     from app.core.database import AsyncSessionLocal
-    from app.repositories.cluster_repository import ClusterRepository
     from app.models.cluster import Cluster
+    from app.repositories.cluster_repository import ClusterRepository
 
     async with AsyncSessionLocal() as session:
         repo = ClusterRepository(model=Cluster, session=session)

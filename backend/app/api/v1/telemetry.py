@@ -1,6 +1,5 @@
 """Observability telemetry API."""
 
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,13 +51,13 @@ async def get_telemetry_summary(
 
 @router.get("/metrics", response_model=list[MetricOut])
 async def list_metrics(
-    metric_name: Optional[str] = Query(default=None),
-    cluster_id: Optional[str] = Query(default=None),
-    namespace_name: Optional[str] = Query(default=None),
-    deployment_name: Optional[str] = Query(default=None),
-    pod_name: Optional[str] = Query(default=None),
-    service_name: Optional[str] = Query(default=None),
-    incident_id: Optional[str] = Query(default=None),
+    metric_name: str | None = Query(default=None),
+    cluster_id: str | None = Query(default=None),
+    namespace_name: str | None = Query(default=None),
+    deployment_name: str | None = Query(default=None),
+    pod_name: str | None = Query(default=None),
+    service_name: str | None = Query(default=None),
+    incident_id: str | None = Query(default=None),
     limit: int = Query(default=500, ge=1, le=2000),
     service: TelemetryService = Depends(get_telemetry_service),
     _: CurrentUser = Depends(get_current_user),
@@ -79,13 +78,13 @@ async def list_metrics(
 
 @router.get("/logs", response_model=list[LogEntryOut])
 async def list_logs(
-    cluster_id: Optional[str] = Query(default=None),
-    severity: Optional[str] = Query(default=None),
-    namespace_name: Optional[str] = Query(default=None),
-    deployment_name: Optional[str] = Query(default=None),
-    pod_name: Optional[str] = Query(default=None),
-    service_name: Optional[str] = Query(default=None),
-    incident_id: Optional[str] = Query(default=None),
+    cluster_id: str | None = Query(default=None),
+    severity: str | None = Query(default=None),
+    namespace_name: str | None = Query(default=None),
+    deployment_name: str | None = Query(default=None),
+    pod_name: str | None = Query(default=None),
+    service_name: str | None = Query(default=None),
+    incident_id: str | None = Query(default=None),
     limit: int = Query(default=200, ge=1, le=1000),
     service: TelemetryService = Depends(get_telemetry_service),
     _: CurrentUser = Depends(get_current_user),
@@ -106,14 +105,14 @@ async def list_logs(
 
 @router.get("/events", response_model=list[InfrastructureEventOut])
 async def list_events(
-    cluster_id: Optional[str] = Query(default=None),
-    severity: Optional[str] = Query(default=None),
-    resource_type: Optional[str] = Query(default=None),
-    namespace_name: Optional[str] = Query(default=None),
-    deployment_name: Optional[str] = Query(default=None),
-    pod_name: Optional[str] = Query(default=None),
-    service_name: Optional[str] = Query(default=None),
-    incident_id: Optional[str] = Query(default=None),
+    cluster_id: str | None = Query(default=None),
+    severity: str | None = Query(default=None),
+    resource_type: str | None = Query(default=None),
+    namespace_name: str | None = Query(default=None),
+    deployment_name: str | None = Query(default=None),
+    pod_name: str | None = Query(default=None),
+    service_name: str | None = Query(default=None),
+    incident_id: str | None = Query(default=None),
     limit: int = Query(default=200, ge=1, le=1000),
     service: TelemetryService = Depends(get_telemetry_service),
     _: CurrentUser = Depends(get_current_user),
@@ -135,11 +134,11 @@ async def list_events(
 
 @router.get("/traces", response_model=list[TraceOut])
 async def list_traces(
-    cluster_id: Optional[str] = Query(default=None),
-    namespace_name: Optional[str] = Query(default=None),
-    deployment_name: Optional[str] = Query(default=None),
-    pod_name: Optional[str] = Query(default=None),
-    incident_id: Optional[str] = Query(default=None),
+    cluster_id: str | None = Query(default=None),
+    namespace_name: str | None = Query(default=None),
+    deployment_name: str | None = Query(default=None),
+    pod_name: str | None = Query(default=None),
+    incident_id: str | None = Query(default=None),
     limit: int = Query(default=200, ge=1, le=1000),
     service: TelemetryService = Depends(get_telemetry_service),
     _: CurrentUser = Depends(get_current_user),
@@ -159,7 +158,7 @@ async def list_traces(
 @router.get("/clusters/{cluster_id}/metrics", response_model=list[MetricOut])
 async def list_cluster_metrics(
     cluster_id: str,
-    metric_name: Optional[str] = Query(default=None),
+    metric_name: str | None = Query(default=None),
     limit: int = Query(default=500, ge=1, le=2000),
     service: TelemetryService = Depends(get_telemetry_service),
     _: CurrentUser = Depends(get_current_user),

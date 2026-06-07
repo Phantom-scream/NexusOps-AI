@@ -3,8 +3,8 @@ NexusOps AI — Cluster Service
 Business logic for cluster management and synchronization
 """
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 
@@ -52,7 +52,7 @@ class ClusterService:
         logger.info("Cluster registered", cluster_id=created.id, cluster_name=created.name)
         return created
 
-    async def get_cluster(self, cluster_id: str) -> Optional[Cluster]:
+    async def get_cluster(self, cluster_id: str) -> Cluster | None:
         return await self.repo.get_with_nodes(cluster_id)
 
     async def list_clusters(
@@ -60,13 +60,13 @@ class ClusterService:
         skip: int = 0,
         limit: int = 50,
         active_only: bool = True,
-    ) -> tuple[List[Cluster], int]:
+    ) -> tuple[list[Cluster], int]:
         filters = {"is_active": True} if active_only else None
         clusters = await self.repo.get_all(skip=skip, limit=limit, filters=filters)
         total = await self.repo.count(filters=filters)
         return list(clusters), total
 
-    async def update_cluster(self, cluster_id: str, data: ClusterUpdate) -> Optional[Cluster]:
+    async def update_cluster(self, cluster_id: str, data: ClusterUpdate) -> Cluster | None:
         cluster = await self.repo.get(cluster_id)
         if not cluster:
             return None
@@ -84,7 +84,7 @@ class ClusterService:
     async def sync_cluster_resources(
         self,
         cluster_id: str,
-        k8s_data: Dict[str, Any],
+        k8s_data: dict[str, Any],
     ) -> Cluster:
         """
         Synchronize live Kubernetes resource data into the platform.
@@ -94,7 +94,7 @@ class ClusterService:
         if not cluster:
             raise ValueError(f"Cluster {cluster_id} not found.")
 
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         cluster.node_count = k8s_data.get("node_count", 0)
         cluster.namespace_count = k8s_data.get("namespace_count", 0)
@@ -103,7 +103,7 @@ class ClusterService:
         cluster.cpu_capacity = k8s_data.get("cpu_capacity")
         cluster.memory_capacity_gb = k8s_data.get("memory_capacity_gb")
         cluster.status = ClusterStatus.CONNECTED
-        cluster.last_sync_at = datetime.now(timezone.utc)
+        cluster.last_sync_at = datetime.now(UTC)
 
         await self.repo.save(cluster)
         logger.info("Cluster synced", cluster_id=cluster_id, pod_count=cluster.pod_count)
@@ -129,20 +129,20 @@ class ClusterService:
     async def get_workloads(
         self,
         cluster_id: str,
-        namespace: Optional[str] = None,
+        namespace: str | None = None,
         skip: int = 0,
         limit: int = 100,
-    ) -> List[KubernetesWorkload]:
+    ) -> list[KubernetesWorkload]:
         workloads = await self.repo.get_workloads(cluster_id, namespace, skip, limit)
         return list(workloads)
 
     async def get_deployments(
         self,
         cluster_id: str,
-        namespace: Optional[str] = None,
+        namespace: str | None = None,
         skip: int = 0,
         limit: int = 100,
-    ) -> List[KubernetesWorkload]:
+    ) -> list[KubernetesWorkload]:
         workloads = await self.repo.get_workloads(cluster_id, namespace, skip, limit)
         return [w for w in workloads if w.kind == "Deployment"]
 
@@ -155,31 +155,31 @@ class ClusterService:
     async def get_pods(
         self,
         cluster_id: str,
-        namespace: Optional[str] = None,
+        namespace: str | None = None,
         skip: int = 0,
         limit: int = 200,
-    ) -> List[KubernetesPod]:
+    ) -> list[KubernetesPod]:
         return list(await self.repo.get_pods(cluster_id, namespace, skip, limit))
 
     async def get_services(
         self,
         cluster_id: str,
-        namespace: Optional[str] = None,
+        namespace: str | None = None,
         skip: int = 0,
         limit: int = 200,
-    ) -> List[KubernetesService]:
+    ) -> list[KubernetesService]:
         return list(await self.repo.get_services(cluster_id, namespace, skip, limit))
 
     async def get_replicasets(
         self,
         cluster_id: str,
-        namespace: Optional[str] = None,
+        namespace: str | None = None,
         skip: int = 0,
         limit: int = 200,
     ):
         return list(await self.repo.get_replicasets(cluster_id, namespace, skip, limit))
 
-    async def get_topology(self, cluster_id: str) -> Dict[str, Any]:
+    async def get_topology(self, cluster_id: str) -> dict[str, Any]:
         cluster = await self.repo.get_with_topology(cluster_id)
         if not cluster:
             return {}
@@ -259,7 +259,7 @@ class ClusterService:
 
         return {
             "cluster_id": cluster.id,
-            "generated_at": datetime.now(timezone.utc),
+            "generated_at": datetime.now(UTC),
             "root": {
                 "id": cluster.id,
                 "name": cluster.name,
@@ -274,7 +274,7 @@ class ClusterService:
             },
         }
 
-    async def get_cluster_summary(self, cluster_id: str) -> Dict[str, Any]:
+    async def get_cluster_summary(self, cluster_id: str) -> dict[str, Any]:
         """Get a high-level health and resource summary for dashboard display."""
         cluster = await self.repo.get_with_nodes(cluster_id)
         if not cluster:

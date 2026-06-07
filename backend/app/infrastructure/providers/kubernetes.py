@@ -1,6 +1,5 @@
 """Kubernetes-backed infrastructure provider."""
 
-from typing import Optional
 
 from app.infrastructure.kubernetes_client import KubernetesClient
 from app.infrastructure.providers.base import InfrastructureProvider, InfrastructureSnapshot
@@ -14,9 +13,9 @@ class KubernetesProvider(InfrastructureProvider):
 
     def __init__(
         self,
-        cluster: Optional[Cluster] = None,
-        kubeconfig_path: Optional[str] = None,
-        context: Optional[str] = None,
+        cluster: Cluster | None = None,
+        kubeconfig_path: str | None = None,
+        context: str | None = None,
     ):
         self.cluster = cluster
         self.client = KubernetesClient(kubeconfig_path=kubeconfig_path, context=context)

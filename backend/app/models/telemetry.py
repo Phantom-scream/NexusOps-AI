@@ -1,7 +1,6 @@
 """Telemetry domain models for infrastructure observability."""
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -17,12 +16,12 @@ class TelemetrySource(Base, UUIDMixin, TimestampMixin):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     source_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    endpoint_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    cluster_id: Mapped[Optional[str]] = mapped_column(
+    endpoint_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cluster_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("clusters.id", ondelete="SET NULL"), nullable=True, index=True
     )
     is_active: Mapped[bool] = mapped_column(default=True)
-    config: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=dict)
+    config: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
 
 
 class Metric(Base, UUIDMixin, TimestampMixin):
@@ -35,23 +34,23 @@ class Metric(Base, UUIDMixin, TimestampMixin):
     value: Mapped[float] = mapped_column(Float, nullable=False)
     unit: Mapped[str] = mapped_column(String(50), nullable=False, default="count")
     resource_type: Mapped[str] = mapped_column(String(50), nullable=False, default="cluster", index=True)
-    resource_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    resource_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    source_id: Mapped[Optional[str]] = mapped_column(
+    source_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("telemetry_sources.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    cluster_id: Mapped[Optional[str]] = mapped_column(
+    cluster_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("clusters.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    namespace_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    deployment_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    pod_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    service_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    incident_id: Mapped[Optional[str]] = mapped_column(
+    namespace_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    deployment_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    pod_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    service_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    incident_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("incidents.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
-    labels: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=dict)
+    labels: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
 
 
 class LogEntry(Base, UUIDMixin, TimestampMixin):
@@ -64,22 +63,22 @@ class LogEntry(Base, UUIDMixin, TimestampMixin):
     source: Mapped[str] = mapped_column(String(150), nullable=False, default="application")
     message: Mapped[str] = mapped_column(Text, nullable=False)
 
-    source_id: Mapped[Optional[str]] = mapped_column(
+    source_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("telemetry_sources.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    cluster_id: Mapped[Optional[str]] = mapped_column(
+    cluster_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("clusters.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    namespace_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    deployment_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    pod_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    service_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    incident_id: Mapped[Optional[str]] = mapped_column(
+    namespace_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    deployment_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    pod_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    service_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    incident_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("incidents.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    trace_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
-    span_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
-    attributes: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=dict)
+    trace_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    span_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    attributes: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
 
 
 class InfrastructureEvent(Base, UUIDMixin, TimestampMixin):
@@ -95,20 +94,20 @@ class InfrastructureEvent(Base, UUIDMixin, TimestampMixin):
     resource_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     resource_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
 
-    source_id: Mapped[Optional[str]] = mapped_column(
+    source_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("telemetry_sources.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    cluster_id: Mapped[Optional[str]] = mapped_column(
+    cluster_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("clusters.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    namespace_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    deployment_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    pod_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    service_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    incident_id: Mapped[Optional[str]] = mapped_column(
+    namespace_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    deployment_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    pod_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    service_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    incident_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("incidents.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    attributes: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=dict)
+    attributes: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)
 
 
 class Trace(Base, UUIDMixin, TimestampMixin):
@@ -118,7 +117,7 @@ class Trace(Base, UUIDMixin, TimestampMixin):
 
     trace_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     span_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    parent_span_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    parent_span_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     operation_name: Mapped[str] = mapped_column(String(255), nullable=False)
     service_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="ok", index=True)
@@ -126,16 +125,16 @@ class Trace(Base, UUIDMixin, TimestampMixin):
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    source_id: Mapped[Optional[str]] = mapped_column(
+    source_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("telemetry_sources.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    cluster_id: Mapped[Optional[str]] = mapped_column(
+    cluster_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("clusters.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    namespace_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    deployment_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    pod_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    incident_id: Mapped[Optional[str]] = mapped_column(
+    namespace_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    deployment_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    pod_name: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    incident_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("incidents.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    attributes: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=dict)
+    attributes: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=dict)

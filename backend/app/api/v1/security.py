@@ -2,7 +2,6 @@
 NexusOps AI — Security API
 """
 import uuid
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,9 +24,9 @@ router = APIRouter()
 async def list_findings(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    severity: Optional[str] = Query(default=None),
-    category: Optional[str] = Query(default=None),
-    cluster_id: Optional[str] = Query(default=None),
+    severity: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+    cluster_id: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: CurrentUser = Depends(get_current_user),
 ):
@@ -108,7 +107,7 @@ async def trigger_terraform_scan(
     await db.flush()
 
     from app.workers.analysis_tasks import run_terraform_scan_task
-    task = run_terraform_scan_task.delay(
+    run_terraform_scan_task.delay(
         scan_id=scan.id,
         terraform_content=request.terraform_content,
         scan_name=request.scan_name,

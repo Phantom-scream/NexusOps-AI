@@ -1,6 +1,6 @@
 """Telemetry ingestion and query orchestration."""
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 import structlog
 
@@ -62,13 +62,13 @@ class TelemetryService:
     async def list_metrics(
         self,
         *,
-        cluster_id: Optional[str] = None,
-        metric_name: Optional[str] = None,
-        namespace_name: Optional[str] = None,
-        deployment_name: Optional[str] = None,
-        pod_name: Optional[str] = None,
-        service_name: Optional[str] = None,
-        incident_id: Optional[str] = None,
+        cluster_id: str | None = None,
+        metric_name: str | None = None,
+        namespace_name: str | None = None,
+        deployment_name: str | None = None,
+        pod_name: str | None = None,
+        service_name: str | None = None,
+        incident_id: str | None = None,
         limit: int = 500,
     ) -> Sequence[Metric]:
         return await self.telemetry_repo.list_metrics(
@@ -85,13 +85,13 @@ class TelemetryService:
     async def list_logs(
         self,
         *,
-        cluster_id: Optional[str] = None,
-        severity: Optional[str] = None,
-        namespace_name: Optional[str] = None,
-        deployment_name: Optional[str] = None,
-        pod_name: Optional[str] = None,
-        service_name: Optional[str] = None,
-        incident_id: Optional[str] = None,
+        cluster_id: str | None = None,
+        severity: str | None = None,
+        namespace_name: str | None = None,
+        deployment_name: str | None = None,
+        pod_name: str | None = None,
+        service_name: str | None = None,
+        incident_id: str | None = None,
         limit: int = 200,
     ) -> Sequence[LogEntry]:
         return await self.telemetry_repo.list_logs(
@@ -108,14 +108,14 @@ class TelemetryService:
     async def list_events(
         self,
         *,
-        cluster_id: Optional[str] = None,
-        severity: Optional[str] = None,
-        resource_type: Optional[str] = None,
-        namespace_name: Optional[str] = None,
-        deployment_name: Optional[str] = None,
-        pod_name: Optional[str] = None,
-        service_name: Optional[str] = None,
-        incident_id: Optional[str] = None,
+        cluster_id: str | None = None,
+        severity: str | None = None,
+        resource_type: str | None = None,
+        namespace_name: str | None = None,
+        deployment_name: str | None = None,
+        pod_name: str | None = None,
+        service_name: str | None = None,
+        incident_id: str | None = None,
         limit: int = 200,
     ) -> Sequence[InfrastructureEvent]:
         return await self.telemetry_repo.list_events(
@@ -133,11 +133,11 @@ class TelemetryService:
     async def list_traces(
         self,
         *,
-        cluster_id: Optional[str] = None,
-        namespace_name: Optional[str] = None,
-        deployment_name: Optional[str] = None,
-        pod_name: Optional[str] = None,
-        incident_id: Optional[str] = None,
+        cluster_id: str | None = None,
+        namespace_name: str | None = None,
+        deployment_name: str | None = None,
+        pod_name: str | None = None,
+        incident_id: str | None = None,
         limit: int = 200,
     ) -> Sequence[Trace]:
         return await self.telemetry_repo.list_traces(
@@ -149,5 +149,5 @@ class TelemetryService:
             limit=limit,
         )
 
-    async def summary(self, cluster_id: Optional[str] = None) -> dict:
+    async def summary(self, cluster_id: str | None = None) -> dict:
         return await self.telemetry_repo.summary(cluster_id=cluster_id)

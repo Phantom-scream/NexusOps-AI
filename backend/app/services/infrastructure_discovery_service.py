@@ -1,12 +1,16 @@
 """Infrastructure discovery and ingestion service."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import structlog
 
-from app.infrastructure.providers import DemoProvider, InfrastructureProvider, InfrastructureSnapshot, KubernetesProvider
+from app.infrastructure.providers import (
+    DemoProvider,
+    InfrastructureProvider,
+    InfrastructureSnapshot,
+    KubernetesProvider,
+)
 from app.models.cluster import (
     Cluster,
     ClusterNode,
@@ -28,7 +32,7 @@ class InfrastructureDiscoveryService:
     def __init__(self, repository: ClusterRepository):
         self.repo = repository
 
-    async def sync_cluster(self, cluster_id: str, provider: Optional[InfrastructureProvider] = None) -> Cluster:
+    async def sync_cluster(self, cluster_id: str, provider: InfrastructureProvider | None = None) -> Cluster:
         cluster = await self.repo.get(cluster_id)
         if not cluster:
             raise ValueError(f"Cluster {cluster_id} not found")
@@ -50,7 +54,7 @@ class InfrastructureDiscoveryService:
     async def ingest_snapshot(
         self,
         snapshot: InfrastructureSnapshot,
-        existing_cluster: Optional[Cluster] = None,
+        existing_cluster: Cluster | None = None,
     ) -> Cluster:
         cluster = existing_cluster or await self.repo.get_by_name(snapshot.cluster["name"])
         if not cluster:
@@ -74,7 +78,7 @@ class InfrastructureDiscoveryService:
         cluster.tags = snapshot.cluster.get("tags") or {}
         cluster.metadata_ = snapshot.cluster.get("metadata") or {}
         cluster.is_active = True
-        cluster.last_sync_at = datetime.now(timezone.utc)
+        cluster.last_sync_at = datetime.now(UTC)
 
         await self.repo.session.flush()
 

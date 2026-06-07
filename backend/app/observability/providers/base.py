@@ -1,7 +1,8 @@
 """Telemetry provider abstraction."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Protocol, Sequence
+from typing import Protocol
 
 from app.models.cluster import Cluster
 

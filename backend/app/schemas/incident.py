@@ -2,50 +2,50 @@
 NexusOps AI — Incident Pydantic Schemas
 """
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class IncidentCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=500)
-    description: Optional[str] = None
+    description: str | None = None
     severity: str = "medium"
     source: str = "manual"
-    cluster_id: Optional[str] = None
-    cluster_name: Optional[str] = None
-    namespace: Optional[str] = None
-    affected_workload: Optional[str] = None
-    tags: Optional[List[str]] = None
+    cluster_id: str | None = None
+    cluster_name: str | None = None
+    namespace: str | None = None
+    affected_workload: str | None = None
+    tags: list[str] | None = None
 
 
 class IncidentUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    severity: Optional[str] = None
-    status: Optional[str] = None
-    assignee: Optional[str] = None
-    root_cause: Optional[str] = None
-    remediation_steps: Optional[Dict[str, Any]] = None
+    title: str | None = None
+    description: str | None = None
+    severity: str | None = None
+    status: str | None = None
+    assignee: str | None = None
+    root_cause: str | None = None
+    remediation_steps: dict[str, Any] | None = None
 
 
 class IncidentOut(BaseModel):
     id: str
     title: str
-    description: Optional[str]
+    description: str | None
     severity: str
     status: str
     source: str
-    cluster_id: Optional[str]
-    cluster_name: Optional[str]
-    namespace: Optional[str]
-    affected_workload: Optional[str]
-    root_cause: Optional[str]
-    ai_confidence: Optional[float]
+    cluster_id: str | None
+    cluster_name: str | None
+    namespace: str | None
+    affected_workload: str | None
+    root_cause: str | None
+    ai_confidence: float | None
     remediation_applied: bool
     alert_count: int
-    assignee: Optional[str]
-    tags: Optional[List[str]]
+    assignee: str | None
+    tags: list[str] | None
     created_at: datetime
     updated_at: datetime
 
@@ -66,12 +66,12 @@ class IncidentAnalysisOut(BaseModel):
     incident_id: str
     query: str
     analysis: str
-    root_cause_summary: Optional[str]
-    remediation_yaml: Optional[str]
-    confidence_score: Optional[float]
-    tokens_used: Optional[int]
-    llm_model: Optional[str]
-    context_sources: Optional[List[str]]
+    root_cause_summary: str | None
+    remediation_yaml: str | None
+    confidence_score: float | None
+    tokens_used: int | None
+    llm_model: str | None
+    context_sources: list[str] | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -81,23 +81,23 @@ class AIInvestigateRequest(BaseModel):
     cluster_id: str
     query: str = Field(..., min_length=10, max_length=2000)
     context_window_minutes: int = Field(default=60, ge=5, le=1440)
-    namespace: Optional[str] = None
-    workload: Optional[str] = None
+    namespace: str | None = None
+    workload: str | None = None
 
 
 class AIInvestigateResponse(BaseModel):
-    incident_id: Optional[str]
+    incident_id: str | None
     severity: str
     root_cause: str
-    contributing_factors: List[str]
-    remediation: Dict[str, str]
+    contributing_factors: list[str]
+    remediation: dict[str, str]
     confidence: float
     analysis_detail: str
-    tokens_used: Optional[int]
+    tokens_used: int | None
 
 
 class IncidentListResponse(BaseModel):
-    items: List[IncidentOut]
+    items: list[IncidentOut]
     total: int
     page: int
     page_size: int

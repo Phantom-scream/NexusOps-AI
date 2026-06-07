@@ -2,13 +2,14 @@
 NexusOps AI — Authentication API
 """
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import (
     CurrentUser,
@@ -21,7 +22,6 @@ from app.core.security import (
 )
 from app.models.user import User
 from app.schemas.user import RefreshRequest, TokenResponse, UserLogin, UserOut, UserRegister
-from app.core.config import settings
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -68,7 +68,7 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=403, detail="Account is deactivated")
 
     # Update last login
-    user.last_login_at = datetime.now(timezone.utc).isoformat()
+    user.last_login_at = datetime.now(UTC).isoformat()
     await db.flush()
 
     access_token = create_access_token(subject=user.email, role=user.role)

@@ -2,7 +2,7 @@
 NexusOps AI — Security Pydantic Schemas
 """
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -10,22 +10,22 @@ from pydantic import BaseModel, Field
 class SecurityFindingOut(BaseModel):
     id: str
     title: str
-    description: Optional[str]
+    description: str | None
     severity: str
     category: str
     status: str
-    scanner: Optional[str]
-    rule_id: Optional[str]
-    cve_id: Optional[str]
-    cluster_name: Optional[str]
-    resource_type: Optional[str]
-    resource_name: Optional[str]
-    namespace: Optional[str]
-    file_path: Optional[str]
-    ai_explanation: Optional[str]
-    remediation_suggestion: Optional[str]
-    cvss_score: Optional[float]
-    risk_score: Optional[float]
+    scanner: str | None
+    rule_id: str | None
+    cve_id: str | None
+    cluster_name: str | None
+    resource_type: str | None
+    resource_name: str | None
+    namespace: str | None
+    file_path: str | None
+    ai_explanation: str | None
+    remediation_suggestion: str | None
+    cvss_score: float | None
+    risk_score: float | None
     is_acknowledged: bool
     created_at: datetime
 
@@ -34,17 +34,17 @@ class SecurityFindingOut(BaseModel):
 
 class TerraformScanRequest(BaseModel):
     scan_name: str = Field(..., min_length=3, max_length=255)
-    repository_url: Optional[str] = None
-    branch: Optional[str] = "main"
-    scan_path: Optional[str] = None
-    terraform_content: Optional[str] = None
+    repository_url: str | None = None
+    branch: str | None = "main"
+    scan_path: str | None = None
+    terraform_content: str | None = None
 
 
 class TerraformScanOut(BaseModel):
     id: str
     scan_name: str
-    repository_url: Optional[str]
-    branch: Optional[str]
+    repository_url: str | None
+    branch: str | None
     status: str
     findings_count: int
     critical_count: int
@@ -52,7 +52,7 @@ class TerraformScanOut(BaseModel):
     medium_count: int
     low_count: int
     drift_detected: bool
-    ai_summary: Optional[str]
+    ai_summary: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -66,13 +66,13 @@ class SecurityDashboardStats(BaseModel):
     low_findings: int
     open_findings: int
     remediated_findings: int
-    findings_by_category: Dict[str, int]
-    top_clusters: List[Dict[str, Any]]
-    recent_findings: List[SecurityFindingOut]
+    findings_by_category: dict[str, int]
+    top_clusters: list[dict[str, Any]]
+    recent_findings: list[SecurityFindingOut]
 
 
 class SecurityFindingListResponse(BaseModel):
-    items: List[SecurityFindingOut]
+    items: list[SecurityFindingOut]
     total: int
     page: int
     page_size: int

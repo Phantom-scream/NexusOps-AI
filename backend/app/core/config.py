@@ -3,7 +3,6 @@ NexusOps AI — Application Configuration
 Centralized settings management using Pydantic Settings
 """
 from functools import lru_cache
-from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -89,7 +88,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
 
     @property
-    def cors_origins_list(self) -> List[str]:
+    def cors_origins_list(self) -> list[str]:
         import json
         try:
             parsed = json.loads(self.CORS_ORIGINS)

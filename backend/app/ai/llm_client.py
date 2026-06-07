@@ -2,11 +2,11 @@
 NexusOps AI — LLM Client Abstraction Layer
 Supports OpenAI API and Ollama (local) backends
 """
-from typing import Any, AsyncIterator, Dict, List, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.outputs import LLMResult
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from app.core.config import settings
@@ -64,7 +64,7 @@ class LLMClient:
         system_prompt: str,
         user_message: str,
         temperature: float = 0.1,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Single chat turn with system + user messages.
         Returns: {"content": str, "tokens_used": int, "model": str}
@@ -109,7 +109,7 @@ class LLMClient:
             if chunk.content:
                 yield chunk.content
 
-    async def embed(self, texts: List[str]) -> List[List[float]]:
+    async def embed(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a list of text chunks."""
         embeddings_model = self._get_embeddings_model()
         try:
@@ -118,7 +118,7 @@ class LLMClient:
             logger.error("Embedding generation failed", error=str(exc))
             raise
 
-    async def embed_query(self, text: str) -> List[float]:
+    async def embed_query(self, text: str) -> list[float]:
         """Generate embedding for a single query string."""
         embeddings_model = self._get_embeddings_model()
         try:

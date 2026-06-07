@@ -1,7 +1,7 @@
 """Tests — Infrastructure discovery providers and topology APIs."""
 
-from httpx import AsyncClient
 import pytest
+from httpx import AsyncClient
 
 from app.infrastructure.providers.demo import DemoProvider
 from app.models.cluster import Cluster

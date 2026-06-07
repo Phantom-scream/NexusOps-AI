@@ -2,18 +2,16 @@
 NexusOps AI — AI Investigation API
 Real-time and async AI investigation endpoints with WebSocket streaming
 """
-import asyncio
 import json
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
-from app.core.security import CurrentUser, get_current_user, decode_token
-from app.schemas.incident import AIInvestigateRequest, AIInvestigateResponse
 from app.ai.incident_analyzer import IncidentInvestigationEngine
 from app.ai.rag_pipeline import RAGPipeline
+from app.core.database import get_db
+from app.core.security import CurrentUser, decode_token, get_current_user
+from app.schemas.incident import AIInvestigateRequest, AIInvestigateResponse
 
 router = APIRouter()
 
@@ -84,7 +82,7 @@ async def rag_infrastructure_query(
 async def ai_investigation_stream(
     websocket: WebSocket,
     cluster_id: str,
-    token: Optional[str] = None,
+    token: str | None = None,
 ):
     """
     WebSocket endpoint for streaming AI investigation in real-time.
@@ -96,8 +94,7 @@ async def ai_investigation_stream(
         return
 
     try:
-        payload = decode_token(token)
-        user_id = payload.get("sub")
+        decode_token(token)
     except Exception:
         await websocket.close(code=4001, reason="Invalid token")
         return

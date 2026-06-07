@@ -2,7 +2,7 @@
 NexusOps AI — Async Database Configuration
 SQLAlchemy 2.0 with async support
 """
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import structlog
 from sqlalchemy.ext.asyncio import (

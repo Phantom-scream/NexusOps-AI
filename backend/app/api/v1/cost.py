@@ -1,14 +1,13 @@
 """
 NexusOps AI — Cost Optimization API
 """
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import CurrentUser, get_current_user
-from app.models.cost_recommendation import CostRecommendation, CostAnalysisReport
+from app.models.cost_recommendation import CostRecommendation
 from app.repositories.base import BaseRepository
 
 router = APIRouter()
@@ -16,8 +15,8 @@ router = APIRouter()
 
 @router.get("/recommendations")
 async def list_recommendations(
-    cluster_id: Optional[str] = Query(default=None),
-    optimization_type: Optional[str] = Query(default=None),
+    cluster_id: str | None = Query(default=None),
+    optimization_type: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, le=100),
     db: AsyncSession = Depends(get_db),

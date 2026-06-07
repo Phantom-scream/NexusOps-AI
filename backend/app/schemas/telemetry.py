@@ -1,7 +1,7 @@
 """Typed API schemas for observability telemetry."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -10,10 +10,10 @@ class TelemetrySourceOut(BaseModel):
     id: str
     name: str
     source_type: str
-    endpoint_url: Optional[str]
-    cluster_id: Optional[str]
+    endpoint_url: str | None
+    cluster_id: str | None
     is_active: bool
-    config: Optional[dict]
+    config: dict | None
     created_at: datetime
     updated_at: datetime
 
@@ -27,15 +27,15 @@ class MetricOut(BaseModel):
     value: float
     unit: str
     resource_type: str
-    resource_name: Optional[str]
-    source_id: Optional[str]
-    cluster_id: Optional[str]
-    namespace_name: Optional[str]
-    deployment_name: Optional[str]
-    pod_name: Optional[str]
-    service_name: Optional[str]
-    incident_id: Optional[str]
-    labels: Optional[dict]
+    resource_name: str | None
+    source_id: str | None
+    cluster_id: str | None
+    namespace_name: str | None
+    deployment_name: str | None
+    pod_name: str | None
+    service_name: str | None
+    incident_id: str | None
+    labels: dict | None
 
     model_config = {"from_attributes": True}
 
@@ -52,16 +52,16 @@ class LogEntryOut(BaseModel):
     severity: str
     source: str
     message: str
-    source_id: Optional[str]
-    cluster_id: Optional[str]
-    namespace_name: Optional[str]
-    deployment_name: Optional[str]
-    pod_name: Optional[str]
-    service_name: Optional[str]
-    incident_id: Optional[str]
-    trace_id: Optional[str]
-    span_id: Optional[str]
-    attributes: Optional[dict]
+    source_id: str | None
+    cluster_id: str | None
+    namespace_name: str | None
+    deployment_name: str | None
+    pod_name: str | None
+    service_name: str | None
+    incident_id: str | None
+    trace_id: str | None
+    span_id: str | None
+    attributes: dict | None
 
     model_config = {"from_attributes": True}
 
@@ -75,14 +75,14 @@ class InfrastructureEventOut(BaseModel):
     message: str
     resource_type: str
     resource_name: str
-    source_id: Optional[str]
-    cluster_id: Optional[str]
-    namespace_name: Optional[str]
-    deployment_name: Optional[str]
-    pod_name: Optional[str]
-    service_name: Optional[str]
-    incident_id: Optional[str]
-    attributes: Optional[dict]
+    source_id: str | None
+    cluster_id: str | None
+    namespace_name: str | None
+    deployment_name: str | None
+    pod_name: str | None
+    service_name: str | None
+    incident_id: str | None
+    attributes: dict | None
 
     model_config = {"from_attributes": True}
 
@@ -91,20 +91,20 @@ class TraceOut(BaseModel):
     id: str
     trace_id: str
     span_id: str
-    parent_span_id: Optional[str]
+    parent_span_id: str | None
     operation_name: str
     service_name: str
     status: str
     start_time: datetime
     end_time: datetime
     duration_ms: int
-    source_id: Optional[str]
-    cluster_id: Optional[str]
-    namespace_name: Optional[str]
-    deployment_name: Optional[str]
-    pod_name: Optional[str]
-    incident_id: Optional[str]
-    attributes: Optional[dict]
+    source_id: str | None
+    cluster_id: str | None
+    namespace_name: str | None
+    deployment_name: str | None
+    pod_name: str | None
+    incident_id: str | None
+    attributes: dict | None
 
     model_config = {"from_attributes": True}
 
@@ -115,7 +115,7 @@ class TelemetrySummaryOut(BaseModel):
     events: int
     traces: int
     sources: int
-    latest_timestamp: Optional[datetime] = None
+    latest_timestamp: datetime | None = None
 
 
 class DemoTelemetryResponse(BaseModel):
@@ -129,14 +129,14 @@ class DemoTelemetryResponse(BaseModel):
 
 
 class TelemetryQuery(BaseModel):
-    cluster_id: Optional[str] = None
-    namespace_name: Optional[str] = None
-    deployment_name: Optional[str] = None
-    pod_name: Optional[str] = None
-    service_name: Optional[str] = None
-    incident_id: Optional[str] = None
+    cluster_id: str | None = None
+    namespace_name: str | None = None
+    deployment_name: str | None = None
+    pod_name: str | None = None
+    service_name: str | None = None
+    incident_id: str | None = None
     limit: int = Field(default=200, ge=1, le=1000)
-    metric_name: Optional[str] = None
-    severity: Optional[str] = None
-    resource_type: Optional[str] = None
-    labels: Optional[dict[str, Any]] = None
+    metric_name: str | None = None
+    severity: str | None = None
+    resource_type: str | None = None
+    labels: dict[str, Any] | None = None

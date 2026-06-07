@@ -73,11 +73,11 @@ def run_terraform_scan_task(
 
 async def _analyze_incident_async(incident_id: str, query: str, context_window_minutes: int) -> dict:
     """Full AI incident investigation pipeline."""
-    from app.core.database import AsyncSessionLocal
-    from app.repositories.incident_repository import IncidentRepository, IncidentAnalysisRepository
-    from app.services.incident_service import IncidentService
     from app.ai.incident_analyzer import IncidentInvestigationEngine
+    from app.core.database import AsyncSessionLocal
     from app.models.incident import Incident, IncidentAnalysis
+    from app.repositories.incident_repository import IncidentAnalysisRepository, IncidentRepository
+    from app.services.incident_service import IncidentService
 
     logger.info("Running AI incident analysis", incident_id=incident_id)
 
@@ -138,10 +138,15 @@ async def _run_terraform_scan_async(
     scan_name: str,
     repo_url: str = None,
 ) -> dict:
-    from app.core.database import AsyncSessionLocal
-    from app.models.security_finding import TerraformScan, SecurityFinding, FindingSeverity, FindingCategory, FindingStatus
-    from app.ai.terraform_analyzer import TerraformAnalyzer
     import uuid
+
+    from app.ai.terraform_analyzer import TerraformAnalyzer
+    from app.core.database import AsyncSessionLocal
+    from app.models.security_finding import (
+        FindingStatus,
+        SecurityFinding,
+        TerraformScan,
+    )
 
     async with AsyncSessionLocal() as session:
         scan = await session.get(TerraformScan, scan_id)

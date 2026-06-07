@@ -1,8 +1,8 @@
 """
 NexusOps AI — Backend Application Entry Point
 """
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 import structlog
 from fastapi import FastAPI, Request
@@ -13,9 +13,9 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api.v1.router import api_router
 from app.core.config import settings
-from app.core.database import engine, Base
+from app.core.database import Base, engine
 from app.core.logging import configure_logging
-from app.core.middleware import RequestIDMiddleware, RateLimitMiddleware
+from app.core.middleware import RateLimitMiddleware, RequestIDMiddleware
 from app.events.kafka_client import kafka_manager
 from app.observability.tracing import configure_tracing
 

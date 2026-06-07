@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.infrastructure.providers.base import InfrastructureProvider, InfrastructureSnapshot
 
@@ -27,7 +27,7 @@ class DemoProvider(InfrastructureProvider):
         return snapshots[0]
 
     def discover_all(self) -> list[InfrastructureSnapshot]:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         clusters = [
             self._cluster(
                 name="prod-us-east-1",

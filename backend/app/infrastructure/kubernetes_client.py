@@ -3,7 +3,7 @@ NexusOps AI — Kubernetes API Client
 Async wrapper around the kubernetes Python SDK
 """
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 from kubernetes import client, config
@@ -18,14 +18,14 @@ class KubernetesClient:
     """
     Async-compatible Kubernetes API client.
     Supports both in-cluster (pod service account) and kubeconfig authentication.
-    
+
     Used by the cluster sync task to ingest live infrastructure state.
     """
 
-    def __init__(self, kubeconfig_path: Optional[str] = None, context: Optional[str] = None):
+    def __init__(self, kubeconfig_path: str | None = None, context: str | None = None):
         self.kubeconfig_path = kubeconfig_path or settings.KUBECONFIG_PATH
         self.context = context
-        self._api_client: Optional[client.ApiClient] = None
+        self._api_client: client.ApiClient | None = None
 
     def _initialize(self) -> None:
         """Initialize the Kubernetes API client."""
@@ -46,7 +46,7 @@ class KubernetesClient:
 
         self._api_client = client.ApiClient()
 
-    def get_cluster_info(self) -> Dict[str, Any]:
+    def get_cluster_info(self) -> dict[str, Any]:
         """Fetch cluster-level information: version, nodes, namespaces."""
         self._initialize()
         result = {
@@ -111,7 +111,7 @@ class KubernetesClient:
 
         return result
 
-    def get_workloads(self, namespace: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_workloads(self, namespace: str | None = None) -> list[dict[str, Any]]:
         """Fetch all deployments and statefulsets."""
         self._initialize()
         workloads = []
@@ -144,7 +144,7 @@ class KubernetesClient:
 
         return workloads
 
-    def get_replicasets(self, namespace: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_replicasets(self, namespace: str | None = None) -> list[dict[str, Any]]:
         """Fetch ReplicaSets for topology reconstruction."""
         self._initialize()
         apps_api = client.AppsV1Api(self._api_client)
@@ -159,7 +159,7 @@ class KubernetesClient:
             logger.warning("Failed to list replicasets", error=str(exc))
             return []
 
-    def get_pods(self, namespace: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_pods(self, namespace: str | None = None) -> list[dict[str, Any]]:
         """Fetch Pods with runtime state."""
         self._initialize()
         core_api = client.CoreV1Api(self._api_client)
@@ -174,7 +174,7 @@ class KubernetesClient:
             logger.warning("Failed to list pods", error=str(exc))
             return []
 
-    def get_services(self, namespace: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_services(self, namespace: str | None = None) -> list[dict[str, Any]]:
         """Fetch Services."""
         self._initialize()
         core_api = client.CoreV1Api(self._api_client)
@@ -191,9 +191,9 @@ class KubernetesClient:
 
     def get_events(
         self,
-        namespace: Optional[str] = None,
-        field_selector: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        namespace: str | None = None,
+        field_selector: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Fetch Kubernetes events — critical for incident correlation."""
         self._initialize()
         core_api = client.CoreV1Api(self._api_client)
@@ -219,7 +219,7 @@ class KubernetesClient:
         self,
         namespace: str,
         pod_name: str,
-        container: Optional[str] = None,
+        container: str | None = None,
         tail_lines: int = 100,
     ) -> str:
         """Fetch recent logs from a pod container."""
@@ -238,7 +238,7 @@ class KubernetesClient:
             logger.warning("Failed to fetch pod logs", pod=pod_name, error=str(exc))
             return ""
 
-    def _parse_node(self, node) -> Dict[str, Any]:
+    def _parse_node(self, node) -> dict[str, Any]:
         conditions = {c.type: c.status for c in (node.status.conditions or [])}
         return {
             "name": node.metadata.name,
@@ -253,7 +253,7 @@ class KubernetesClient:
             "labels": node.metadata.labels or {},
         }
 
-    def _parse_deployment(self, dep) -> Dict[str, Any]:
+    def _parse_deployment(self, dep) -> dict[str, Any]:
         spec = dep.spec
         containers = spec.template.spec.containers if spec.template.spec.containers else []
         first_container = containers[0] if containers else None
@@ -286,7 +286,7 @@ class KubernetesClient:
             "is_healthy": (dep.status.ready_replicas or 0 if dep.status else 0) >= (spec.replicas or 1),
         }
 
-    def _parse_statefulset(self, ss) -> Dict[str, Any]:
+    def _parse_statefulset(self, ss) -> dict[str, Any]:
         return {
             "name": ss.metadata.name,
             "namespace_name": ss.metadata.namespace,
@@ -300,7 +300,7 @@ class KubernetesClient:
             "is_healthy": (ss.status.ready_replicas or 0 if ss.status else 0) >= (ss.spec.replicas or 1),
         }
 
-    def _parse_replicaset(self, rs) -> Dict[str, Any]:
+    def _parse_replicaset(self, rs) -> dict[str, Any]:
         owner = (rs.metadata.owner_references or [None])[0]
         desired = rs.spec.replicas if rs.spec and rs.spec.replicas is not None else 0
         ready = rs.status.ready_replicas if rs.status and rs.status.ready_replicas is not None else 0
@@ -315,7 +315,7 @@ class KubernetesClient:
             "selector": rs.spec.selector.match_labels if rs.spec and rs.spec.selector else {},
         }
 
-    def _parse_pod(self, pod) -> Dict[str, Any]:
+    def _parse_pod(self, pod) -> dict[str, Any]:
         owner = (pod.metadata.owner_references or [None])[0]
         statuses = pod.status.container_statuses or []
         restart_count = sum(status.restart_count or 0 for status in statuses)
@@ -335,7 +335,7 @@ class KubernetesClient:
                 "ready": status.ready if status else None,
                 "restart_count": status.restart_count if status else 0,
             }
-            for container, status in zip(pod.spec.containers or [], statuses)
+            for container, status in zip(pod.spec.containers or [], statuses, strict=False)
         ]
         phase = pod.status.phase or "Unknown"
         return {
@@ -355,7 +355,7 @@ class KubernetesClient:
             "started_at": pod.status.start_time if pod.status else None,
         }
 
-    def _parse_service(self, svc) -> Dict[str, Any]:
+    def _parse_service(self, svc) -> dict[str, Any]:
         external_ips = svc.spec.external_i_ps if svc.spec and svc.spec.external_i_ps else []
         return {
             "name": svc.metadata.name,
@@ -377,7 +377,7 @@ class KubernetesClient:
             "annotations": svc.metadata.annotations or {},
         }
 
-    def _parse_event(self, event) -> Dict[str, Any]:
+    def _parse_event(self, event) -> dict[str, Any]:
         return {
             "type": event.type,
             "reason": event.reason,

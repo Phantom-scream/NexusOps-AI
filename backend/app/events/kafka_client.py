@@ -2,9 +2,10 @@
 NexusOps AI — Kafka/Redpanda Event Streaming Client
 Async Kafka producer for platform event bus
 """
-from typing import Any, Dict, Optional
-
 import json
+from datetime import UTC
+from typing import Any
+
 import structlog
 from aiokafka import AIOKafkaProducer
 
@@ -20,7 +21,7 @@ class KafkaManager:
     """
 
     def __init__(self):
-        self._producer: Optional[AIOKafkaProducer] = None
+        self._producer: AIOKafkaProducer | None = None
 
     async def start(self) -> None:
         """Start the Kafka producer."""
@@ -47,8 +48,8 @@ class KafkaManager:
     async def publish(
         self,
         topic: str,
-        event: Dict[str, Any],
-        key: Optional[str] = None,
+        event: dict[str, Any],
+        key: str | None = None,
     ) -> None:
         """
         Publish an event to a Kafka topic.
@@ -68,14 +69,14 @@ class KafkaManager:
         self,
         incident_id: str,
         event_type: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
     ) -> None:
         """Publish an incident lifecycle event."""
-        from datetime import datetime, timezone
+        from datetime import datetime
         event = {
             "event_type": event_type,
             "incident_id": incident_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "payload": payload,
         }
         await self.publish(settings.KAFKA_TOPIC_INCIDENTS, event, key=incident_id)
@@ -84,14 +85,14 @@ class KafkaManager:
         self,
         cluster_id: str,
         event_type: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
     ) -> None:
         """Publish a cluster lifecycle event."""
-        from datetime import datetime, timezone
+        from datetime import datetime
         event = {
             "event_type": event_type,
             "cluster_id": cluster_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "payload": payload,
         }
         await self.publish(settings.KAFKA_TOPIC_EVENTS, event, key=cluster_id)
