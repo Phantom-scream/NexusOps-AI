@@ -3,6 +3,7 @@ NexusOps AI — Security Utilities
 JWT authentication, password hashing, RBAC
 """
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import structlog
 from fastapi import Depends, HTTPException, status
@@ -54,6 +55,9 @@ def create_access_token(
         "role": role,
         "iat": now,
         "exp": expire,
+        "iss": settings.JWT_ISSUER,
+        "aud": settings.JWT_AUDIENCE,
+        "jti": str(uuid4()),
         "type": "access",
     }
 
@@ -72,6 +76,9 @@ def create_refresh_token(subject: str) -> str:
         "sub": subject,
         "iat": now,
         "exp": expire,
+        "iss": settings.JWT_ISSUER,
+        "aud": settings.JWT_AUDIENCE,
+        "jti": str(uuid4()),
         "type": "refresh",
     }
 
@@ -85,6 +92,8 @@ def decode_token(token: str) -> dict:
             token,
             settings.JWT_SECRET_KEY,
             algorithms=[settings.JWT_ALGORITHM],
+            issuer=settings.JWT_ISSUER,
+            audience=settings.JWT_AUDIENCE,
         )
         return payload
     except JWTError as exc:

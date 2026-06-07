@@ -84,7 +84,7 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(data: RefreshRequest):
+async def refresh_token(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
     """Exchange a refresh token for a new access token."""
     payload = decode_token(data.refresh_token)
 
@@ -92,7 +92,15 @@ async def refresh_token(data: RefreshRequest):
         raise HTTPException(status_code=400, detail="Invalid token type")
 
     subject = payload.get("sub")
-    new_access_token = create_access_token(subject=subject)
+    if not subject:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
+    result = await db.execute(select(User).where(User.email == subject))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User is not active")
+
+    new_access_token = create_access_token(subject=user.email, role=user.role)
     new_refresh_token = create_refresh_token(subject=subject)
 
     return TokenResponse(

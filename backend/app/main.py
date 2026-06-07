@@ -15,7 +15,7 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.core.logging import configure_logging
-from app.core.middleware import RateLimitMiddleware, RequestIDMiddleware
+from app.core.middleware import RateLimitMiddleware, RequestIDMiddleware, SecurityHeadersMiddleware
 from app.events.kafka_client import kafka_manager
 from app.observability.tracing import configure_tracing
 
@@ -47,6 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 def create_application() -> FastAPI:
+    settings.validate_production_safety()
     configure_logging()
     configure_tracing()
 
@@ -67,10 +68,11 @@ def create_application() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=settings.cors_methods_list,
+        allow_headers=settings.cors_headers_list,
     )
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(RateLimitMiddleware)
 

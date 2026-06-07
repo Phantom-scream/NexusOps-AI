@@ -51,6 +51,25 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Attach conservative security headers to API responses."""
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        response = await call_next(request)
+        if not settings.SECURITY_HEADERS_ENABLED:
+            return response
+
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        response.headers.setdefault(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), payment=()",
+        )
+        return response
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Simple in-memory per-IP rate limiting.

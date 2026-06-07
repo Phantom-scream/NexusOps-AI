@@ -2,9 +2,18 @@
 NexusOps AI — Application Configuration
 Centralized settings management using Pydantic Settings
 """
+import json
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _parse_csv_or_json_list(value: str) -> list[str]:
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, list) else [value]
+    except (json.JSONDecodeError, ValueError):
+        return [item.strip() for item in value.split(",") if item.strip()]
 
 
 class Settings(BaseSettings):
@@ -81,22 +90,30 @@ class Settings(BaseSettings):
     # ----------------------------------------------------------
     JWT_SECRET_KEY: str = "change-me-in-production-jwt-secret"
     JWT_ALGORITHM: str = "HS256"
+    JWT_ISSUER: str = "nexusops-ai"
+    JWT_AUDIENCE: str = "nexusops-api"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # Comma-separated string to avoid pydantic-settings v2 JSON-decode issues with List[str]
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
+    CORS_METHODS: str = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+    CORS_HEADERS: str = "Authorization,Content-Type,X-Request-ID"
 
     @property
     def cors_origins_list(self) -> list[str]:
-        import json
-        try:
-            parsed = json.loads(self.CORS_ORIGINS)
-            return parsed if isinstance(parsed, list) else [self.CORS_ORIGINS]
-        except (json.JSONDecodeError, ValueError):
-            return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+        return _parse_csv_or_json_list(self.CORS_ORIGINS)
+
+    @property
+    def cors_methods_list(self) -> list[str]:
+        return _parse_csv_or_json_list(self.CORS_METHODS)
+
+    @property
+    def cors_headers_list(self) -> list[str]:
+        return _parse_csv_or_json_list(self.CORS_HEADERS)
 
     RATE_LIMIT_PER_MINUTE: int = 60
+    SECURITY_HEADERS_ENABLED: bool = True
 
     # ----------------------------------------------------------
     # Observability
@@ -124,6 +141,30 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.APP_ENV == "development"
+
+    def validate_production_safety(self) -> None:
+        """Block common unsafe production configuration mistakes at startup."""
+        if not self.is_production:
+            return
+
+        unsafe_values = {
+            "SECRET_KEY": self.SECRET_KEY,
+            "JWT_SECRET_KEY": self.JWT_SECRET_KEY,
+        }
+        weak = [
+            name
+            for name, value in unsafe_values.items()
+            if not value or "change-me" in value.lower() or len(value) < 32
+        ]
+        if weak:
+            joined = ", ".join(weak)
+            raise RuntimeError(f"Unsafe production secret configuration: {joined}")
+
+        if self.APP_DEBUG:
+            raise RuntimeError("APP_DEBUG must be false in production")
+
+        if "*" in self.cors_origins_list:
+            raise RuntimeError("Wildcard CORS origins are not allowed in production")
 
 
 @lru_cache

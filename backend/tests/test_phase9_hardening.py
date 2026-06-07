@@ -3,7 +3,11 @@
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
+import pytest
+from httpx import AsyncClient
+
 from app.ai.evidence_collector import EvidenceCollector
+from app.core.config import Settings
 from app.infrastructure.providers.demo import DemoProvider
 from app.models.cost_recommendation import OptimizationFinding, ResourceUtilization
 from app.models.investigation import InvestigationEvidence
@@ -12,6 +16,28 @@ from app.models.terraform import TerraformResource
 from app.services.investigation_service import InvestigationService
 from app.services.optimization_service import OptimizationService
 from app.services.terraform_service import TerraformAnalysisService
+
+
+def test_production_config_rejects_placeholder_secrets():
+    config = Settings(
+        APP_ENV="production",
+        APP_DEBUG=False,
+        SECRET_KEY="change-me-in-production",
+        JWT_SECRET_KEY="change-me-in-production-jwt-secret",
+        CORS_ORIGINS="https://nexusops.example.com",
+    )
+
+    with pytest.raises(RuntimeError, match="Unsafe production secret"):
+        config.validate_production_safety()
+
+
+@pytest.mark.asyncio
+async def test_security_headers_are_added(client: AsyncClient):
+    response = await client.get("/health")
+
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["Referrer-Policy"] == "no-referrer"
 
 
 def _optimization_service() -> OptimizationService:
