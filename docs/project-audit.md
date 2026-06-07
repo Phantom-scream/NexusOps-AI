@@ -147,10 +147,12 @@ The next engineering priority should be converting the dashboard from static moc
 
 ### Phase 8: Cost Optimization
 
-1. Add cost analysis service and repository.
-2. Generate recommendations from workload requests, utilization, and provider pricing abstractions.
-3. Connect frontend Cost Optimization page to backend data.
-4. Add action workflow states for recommendation implementation.
+1. Completed ResourceUtilization, OptimizationRule, OptimizationFinding, OptimizationReport, and enriched CostRecommendation persistence.
+2. Completed deterministic optimization rules for CPU oversizing, memory oversizing, excessive replicas, idle services, missing autoscaling, and restart waste.
+3. Completed telemetry/topology-backed analysis with demo optimization scenarios and estimated savings.
+4. Completed AI-style explanations with OpenAI/Ollama extension points and deterministic fallback.
+5. Completed `/optimization` APIs and React Query-backed Cost Optimization frontend.
+6. Remaining: add cloud-provider pricing adapters, VPA/HPA recommendation simulation, approval workflows, and PR-based remediation.
 
 ### Phase 9: Production Deployment
 

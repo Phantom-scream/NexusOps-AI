@@ -8,7 +8,14 @@ from app.models.cluster import (
     KubernetesService,
     KubernetesWorkload,
 )
-from app.models.cost_recommendation import CostAnalysisReport, CostRecommendation
+from app.models.cost_recommendation import (
+    CostAnalysisReport,
+    CostRecommendation,
+    OptimizationFinding,
+    OptimizationReport,
+    OptimizationRule,
+    ResourceUtilization,
+)
 from app.models.incident import Incident, IncidentAnalysis
 from app.models.investigation import Investigation, InvestigationEvidence
 from app.models.security_finding import SecurityFinding, TerraformScan
@@ -30,7 +37,8 @@ __all__ = [
     "SecurityFinding", "TerraformScan",
     "TerraformWorkspace", "TerraformResource", "TerraformFinding",
     "TerraformDrift", "TerraformPolicyViolation",
-    "CostRecommendation", "CostAnalysisReport",
+    "CostRecommendation", "CostAnalysisReport", "ResourceUtilization",
+    "OptimizationRule", "OptimizationReport", "OptimizationFinding",
     "TelemetrySource", "Metric", "LogEntry", "InfrastructureEvent", "Trace",
     "User",
 ]

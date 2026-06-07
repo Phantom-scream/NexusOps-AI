@@ -12,6 +12,7 @@ from app.api.v1 import (
     demo,
     incidents,
     investigations,
+    optimization,
     security,
     telemetry,
     terraform,
@@ -29,3 +30,4 @@ api_router.include_router(demo.router, prefix="/demo", tags=["Demo Infrastructur
 api_router.include_router(telemetry.router, tags=["Telemetry"])
 api_router.include_router(investigations.router, tags=["AI Investigations"])
 api_router.include_router(terraform.router, prefix="/terraform", tags=["Terraform Security"])
+api_router.include_router(optimization.router, prefix="/optimization", tags=["Cost Optimization"])
