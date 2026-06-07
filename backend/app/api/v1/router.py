@@ -14,6 +14,7 @@ from app.api.v1 import (
     investigations,
     security,
     telemetry,
+    terraform,
 )
 
 api_router = APIRouter()
@@ -27,3 +28,4 @@ api_router.include_router(ai.router, prefix="/ai", tags=["AI Investigation"])
 api_router.include_router(demo.router, prefix="/demo", tags=["Demo Infrastructure"])
 api_router.include_router(telemetry.router, tags=["Telemetry"])
 api_router.include_router(investigations.router, tags=["AI Investigations"])
+api_router.include_router(terraform.router, prefix="/terraform", tags=["Terraform Security"])

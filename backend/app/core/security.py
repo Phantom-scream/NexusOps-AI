@@ -2,8 +2,7 @@
 NexusOps AI — Security Utilities
 JWT authentication, password hashing, RBAC
 """
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 import structlog
 from fastapi import Depends, HTTPException, status
@@ -18,8 +17,9 @@ logger = structlog.get_logger(__name__)
 # Password hashing context (bcrypt)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Bearer token scheme
-security_scheme = HTTPBearer()
+# Bearer token scheme. auto_error=False lets NexusOps return a consistent 401
+# for missing credentials instead of FastAPI's default 403.
+security_scheme = HTTPBearer(auto_error=False)
 
 
 # ----------------------------------------------------------
@@ -43,10 +43,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(
     subject: str,
     role: str = "viewer",
-    extra_claims: Optional[dict] = None,
+    extra_claims: dict | None = None,
 ) -> str:
     """Create a signed JWT access token."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expire = now + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
 
     payload = {
@@ -65,7 +65,7 @@ def create_access_token(
 
 def create_refresh_token(subject: str) -> str:
     """Create a signed JWT refresh token."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expire = now + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
 
     payload = {
@@ -93,7 +93,7 @@ def decode_token(token: str) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from exc
 
 
 # ----------------------------------------------------------
@@ -118,9 +118,15 @@ class CurrentUser:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
 ) -> CurrentUser:
     """FastAPI dependency to extract and validate the current user from JWT."""
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication credentials were not provided",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     token = credentials.credentials
     payload = decode_token(token)
 

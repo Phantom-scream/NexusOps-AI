@@ -138,10 +138,12 @@ The next engineering priority should be converting the dashboard from static moc
 
 ### Phase 7: Terraform Security and Drift
 
-1. Add Terraform parser and drift models.
-2. Implement OPA/Trivy-backed scan flow.
-3. Add scan results API and frontend detail pages.
-4. Add remediation suggestion generation.
+1. Completed OPA and OpenTelemetry Collector stabilization with healthchecks.
+2. Completed Terraform workspace, resource, finding, drift, scan, and policy violation persistence.
+3. Completed HCL parsing, demo Terraform ingestion, deterministic security checks, OPA evaluation with local fallback, and drift detection.
+4. Completed AI-style finding explanations with OpenAI/Ollama extension points and deterministic fallback.
+5. Completed `/terraform` APIs and Security frontend integration through React Query.
+6. Remaining: add real VCS directory import, richer Terraform state backends, Trivy/checkov-style adapters, and remediation PR workflows.
 
 ### Phase 8: Cost Optimization
 

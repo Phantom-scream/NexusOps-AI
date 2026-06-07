@@ -1,0 +1,20 @@
+{
+  "aws_db_instance.orders": {
+    "identifier": "orders-prod",
+    "instance_type": "db.t3.large",
+    "publicly_accessible": true,
+    "storage_encrypted": false,
+    "skip_final_snapshot": true
+  },
+  "kubernetes_deployment.checkout": {
+    "metadata": [{ "name": "checkout-api" }],
+    "spec": [{ "replicas": 5 }]
+  },
+  "aws_security_group_rule.ssh_world": {
+    "type": "ingress",
+    "from_port": 22,
+    "to_port": 22,
+    "protocol": "tcp",
+    "cidr_blocks": ["0.0.0.0/0"]
+  }
+}

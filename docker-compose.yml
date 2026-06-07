@@ -15,6 +15,7 @@ x-common-env: &common-env
   QDRANT_PORT: 6333
   KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OPA_SERVER_URL: http://opa:8181
 
 services:
 
@@ -266,6 +267,7 @@ services:
       - "4317:4317"
       - "4318:4318"
       - "8888:8888"
+      - "13133:13133"
     volumes:
       - ./infrastructure/observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     depends_on:
@@ -274,6 +276,11 @@ services:
     networks:
       - nexusops-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/otelcol-contrib", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # ----------------------------------------------------------
   # Security
@@ -294,6 +301,11 @@ services:
     networks:
       - nexusops-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/opa", "eval", "true"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 # ============================================================
 # Networks

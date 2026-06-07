@@ -1,295 +1,296 @@
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
-  Shield,
   AlertTriangle,
-  Search,
-  Eye,
+  Bot,
   CheckCircle2,
-  Clock,
-  ExternalLink,
-  ScanLine,
+  GitBranch,
+  Layers3,
+  RefreshCw,
+  Search,
+  Shield,
 } from 'lucide-react'
-import { format, formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
+import clsx from 'clsx'
 import PageHeader from '@/components/ui/PageHeader'
 import { Card, CardHeader } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import DonutChart from '@/components/charts/DonutChart'
-import { mockFindings, mockSummary } from '@/data/mock'
-import type { Severity, FindingCategory, FindingStatus } from '@/types'
-import clsx from 'clsx'
+import { terraformApi, type TerraformDrift, type TerraformFinding } from '@/services/terraform'
 
-const severityFilters: Array<{ label: string; value: Severity | 'all' }> = [
-  { label: 'All', value: 'all' },
-  { label: 'Critical', value: 'critical' },
-  { label: 'High', value: 'high' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'Low', value: 'low' },
-]
-
-const categoryFilters: Array<{ label: string; value: FindingCategory | 'all' }> = [
-  { label: 'All Categories', value: 'all' },
-  { label: 'Vulnerability', value: 'vulnerability' },
-  { label: 'Misconfiguration', value: 'misconfig' },
-  { label: 'Policy Violation', value: 'policy' },
-  { label: 'Secret Exposure', value: 'secret' },
-  { label: 'Network', value: 'network' },
-]
-
-const statusFilters: Array<{ label: string; value: FindingStatus | 'all' }> = [
-  { label: 'All Status', value: 'all' },
-  { label: 'Open', value: 'open' },
-  { label: 'In Progress', value: 'in_progress' },
-  { label: 'Resolved', value: 'resolved' },
-  { label: 'Suppressed', value: 'suppressed' },
-]
+const severityFilters = ['all', 'critical', 'high', 'medium', 'low']
+const categoryFilters = ['all', 'iam', 'network', 'encryption', 'secrets', 'kubernetes', 'rbac', 'policy', 'compliance']
 
 const categoryColors: Record<string, string> = {
-  vulnerability: '#f43f5e',
-  misconfig: '#f97316',
-  policy: '#f59e0b',
-  secret: '#a78bfa',
+  iam: '#f97316',
   network: '#38bdf8',
-}
-
-const categoryLabel: Record<string, string> = {
-  vulnerability: 'Vulnerability',
-  misconfig: 'Misconfiguration',
-  policy: 'Policy Violation',
-  secret: 'Secret Exposure',
-  network: 'Network Exposure',
+  encryption: '#10b981',
+  secrets: '#a78bfa',
+  kubernetes: '#6366f1',
+  rbac: '#f59e0b',
+  policy: '#ef4444',
+  compliance: '#14b8a6',
+  drift: '#eab308',
 }
 
 export default function Security() {
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
-  const [severityFilter, setSeverityFilter] = useState<Severity | 'all'>('all')
-  const [categoryFilter, setCategoryFilter] = useState<FindingCategory | 'all'>('all')
-  const [statusFilter, setStatusFilter] = useState<FindingStatus | 'all'>('open')
-  const [selected, setSelected] = useState<string | null>(null)
+  const [severityFilter, setSeverityFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [selectedFinding, setSelectedFinding] = useState<TerraformFinding | null>(null)
 
-  const filtered = useMemo(() =>
-    mockFindings.filter(f => {
-      if (search && !f.title.toLowerCase().includes(search.toLowerCase()) && !(f.cveId ?? '').toLowerCase().includes(search.toLowerCase())) return false
-      if (severityFilter !== 'all' && f.severity !== severityFilter) return false
-      if (categoryFilter !== 'all' && f.category !== categoryFilter) return false
-      if (statusFilter !== 'all' && f.status !== statusFilter) return false
-      return true
-    }), [search, severityFilter, categoryFilter, statusFilter])
+  const statsQuery = useQuery({ queryKey: ['terraform', 'stats'], queryFn: terraformApi.stats })
+  const findingsQuery = useQuery({
+    queryKey: ['terraform', 'findings', severityFilter, categoryFilter],
+    queryFn: () => terraformApi.findings({
+      page_size: 100,
+      severity: severityFilter === 'all' ? undefined : severityFilter,
+      category: categoryFilter === 'all' ? undefined : categoryFilter,
+    }),
+  })
+  const driftQuery = useQuery({
+    queryKey: ['terraform', 'drift'],
+    queryFn: () => terraformApi.drift({ page_size: 50, status: 'open' }),
+  })
+  const scansQuery = useQuery({ queryKey: ['terraform', 'scans'], queryFn: terraformApi.scans })
 
-  const counts = {
-    critical: mockFindings.filter(f => f.severity === 'critical').length,
-    high: mockFindings.filter(f => f.severity === 'high').length,
-    medium: mockFindings.filter(f => f.severity === 'medium').length,
-    low: mockFindings.filter(f => f.severity === 'low').length,
-  }
+  const demoMutation = useMutation({
+    mutationFn: () => terraformApi.analyze({ demo: true, scan_name: 'Demo Terraform security and drift analysis' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['terraform'] })
+    },
+  })
 
-  const byCategoryData = Object.entries(
-    mockFindings.reduce((acc, f) => {
-      acc[f.category] = (acc[f.category] ?? 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name: categoryLabel[name] ?? name, value, color: categoryColors[name] ?? '#6b7280' }))
+  const findings = findingsQuery.data?.items ?? []
+  const drift = driftQuery.data?.items ?? []
+  const stats = statsQuery.data
+  const latestScan = scansQuery.data?.[0]
 
-  const selectedFinding = selected ? mockFindings.find(f => f.id === selected) : null
+  const filteredFindings = useMemo(() => {
+    const needle = search.trim().toLowerCase()
+    if (!needle) return findings
+    return findings.filter((finding) =>
+      [finding.title, finding.description, finding.rule_id, finding.resource_address, finding.file_path]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(needle)),
+    )
+  }, [findings, search])
+
+  const categoryData = Object.entries(stats?.category_breakdown ?? {})
+    .filter(([, value]) => value > 0)
+    .map(([name, value]) => ({
+      name,
+      value,
+      color: categoryColors[name] ?? '#6b7280',
+    }))
+
+  const isLoading = statsQuery.isLoading || findingsQuery.isLoading || driftQuery.isLoading
 
   return (
     <div className="space-y-6 max-w-[1600px]">
       <PageHeader
-        title="Security"
-        subtitle="Continuous security scanning, vulnerability management, and compliance"
+        title="Terraform Security & Drift"
+        subtitle="IaC posture, OPA policy evaluation, AI explanations, and desired-vs-actual drift"
         breadcrumb={['Home', 'Security']}
         actions={
-          <button className="btn-primary text-xs py-2 px-4 flex items-center gap-2">
-            <ScanLine className="w-3.5 h-3.5" /> Run Scan
+          <button
+            onClick={() => demoMutation.mutate()}
+            disabled={demoMutation.isPending}
+            className="btn-primary text-xs py-2 px-4 flex items-center gap-2 disabled:opacity-60"
+          >
+            <RefreshCw className={clsx('w-3.5 h-3.5', demoMutation.isPending && 'animate-spin')} />
+            {demoMutation.isPending ? 'Analyzing Demo' : 'Run Demo Analysis'}
           </button>
         }
       />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Critical', value: counts.critical, color: 'text-red-500', bg: 'bg-red-500/10' },
-          { label: 'High', value: counts.high, color: 'text-orange-400', bg: 'bg-orange-500/10' },
-          { label: 'Medium', value: counts.medium, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-          { label: 'Low', value: counts.low, color: 'text-sky-400', bg: 'bg-sky-500/10' },
-        ].map(({ label, value, color, bg }) => (
-          <Card key={label} className={clsx('p-5', bg, 'border border-white/[0.05]')}>
-            <p className={clsx('text-3xl font-bold tabular-nums', color)}>{value}</p>
-            <p className="text-xs text-gray-400 font-medium mt-1">{label} severity</p>
-          </Card>
-        ))}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <SummaryCard label="Open Findings" value={stats?.open_findings ?? 0} sub="Terraform risks" tone="text-red-400" />
+        <SummaryCard label="Critical / High" value={`${stats?.critical_findings ?? 0}/${stats?.high_findings ?? 0}`} sub="priority queue" tone="text-orange-400" />
+        <SummaryCard label="Drift Records" value={stats?.drift_count ?? 0} sub="desired vs actual" tone="text-amber-400" />
+        <SummaryCard label="Workspaces" value={stats?.total_workspaces ?? 0} sub={`${stats?.total_resources ?? 0} resources`} tone="text-sky-400" />
       </div>
 
-      {/* Chart + summary */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <Card className="xl:col-span-1">
-          <CardHeader title="Findings by Category" icon={<Shield className="w-3.5 h-3.5" />} />
+        <Card>
+          <CardHeader title="Severity Breakdown" icon={<Shield className="w-3.5 h-3.5" />} />
+          <div className="p-5 space-y-3">
+            {severityFilters.filter((item) => item !== 'all').map((severity) => {
+              const value = stats?.severity_breakdown?.[severity] ?? 0
+              const total = Math.max(stats?.total_findings ?? 1, 1)
+              return (
+                <div key={severity}>
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <Badge value={severity} dot size="xs" />
+                    <span className="text-gray-500 font-mono">{value}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-surface-300 overflow-hidden">
+                    <div className={clsx('h-full rounded-full', severityColor(severity))} style={{ width: `${(value / total) * 100}%` }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title="Finding Categories" icon={<Layers3 className="w-3.5 h-3.5" />} />
           <div className="p-5 flex items-center justify-center">
             <DonutChart
-              data={byCategoryData}
+              data={categoryData}
               size={160}
               innerRadius={52}
               outerRadius={72}
-              centerValue={mockFindings.length}
+              centerValue={stats?.total_findings ?? 0}
               centerLabel="findings"
               showLegend
             />
           </div>
         </Card>
 
-        <Card className="xl:col-span-2">
-          <CardHeader title="CVSS Score Distribution" subtitle="Open findings" icon={<AlertTriangle className="w-3.5 h-3.5" />} />
-          <div className="p-5">
-            <div className="space-y-3">
-              {mockFindings.filter(f => f.status === 'open' || f.status === 'in_progress').slice(0, 6).map(f => (
-                <div key={f.id} className="flex items-center gap-3">
-                  <Badge value={f.severity} dot size="xs" className="flex-shrink-0 w-20" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-xs text-gray-300 truncate">{f.title}</p>
-                      {f.cvssScore && <span className="text-xs font-mono text-gray-400 ml-2 flex-shrink-0">{f.cvssScore.toFixed(1)}</span>}
-                    </div>
-                    <div className="h-1 bg-surface-300 rounded-full overflow-hidden">
-                      <div
-                        className={clsx('h-full rounded-full', f.severity === 'critical' ? 'bg-red-500' : f.severity === 'high' ? 'bg-orange-500' : f.severity === 'medium' ? 'bg-amber-500' : 'bg-sky-500')}
-                        style={{ width: `${((f.cvssScore ?? 5) / 10) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                  {f.cveId && (
-                    <span className="text-[10px] font-mono text-gray-600 flex-shrink-0">{f.cveId}</span>
-                  )}
+        <Card>
+          <CardHeader title="Latest Scan" icon={<GitBranch className="w-3.5 h-3.5" />} />
+          <div className="p-5 space-y-4">
+            {latestScan ? (
+              <>
+                <div>
+                  <p className="text-sm text-gray-200 font-medium">{latestScan.scan_name}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formatDistanceToNow(new Date(latestScan.created_at), { addSuffix: true })}
+                  </p>
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <MiniMetric label="Findings" value={latestScan.findings_count} />
+                  <MiniMetric label="Policy" value={latestScan.policy_violation_count} />
+                  <MiniMetric label="Drift" value={latestScan.drift_count} />
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">{latestScan.ai_summary}</p>
+              </>
+            ) : (
+              <EmptyState text="Run the demo analysis to seed Terraform security data." />
+            )}
           </div>
         </Card>
       </div>
 
-      {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+        <div className="relative flex-1 min-w-[220px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600 pointer-events-none" />
-          <input type="text" placeholder="Search findings…" value={search} onChange={e => setSearch(e.target.value)} className="input pl-9 text-xs py-2" />
+          <input
+            type="text"
+            placeholder="Search findings, rules, resources..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="input pl-9 text-xs py-2"
+          />
         </div>
         <div className="flex items-center gap-1 bg-surface-200 border border-white/[0.05] rounded-lg p-0.5">
-          {severityFilters.map(f => (
-            <button key={f.value} onClick={() => setSeverityFilter(f.value)} className={clsx('text-xs px-3 py-1.5 rounded-md font-medium transition-all', severityFilter === f.value ? 'bg-surface-400 text-gray-100' : 'text-gray-500 hover:text-gray-300')}>{f.label}</button>
+          {severityFilters.map((severity) => (
+            <button
+              key={severity}
+              onClick={() => setSeverityFilter(severity)}
+              className={clsx('text-xs px-3 py-1.5 rounded-md font-medium transition-all capitalize', severityFilter === severity ? 'bg-surface-400 text-gray-100' : 'text-gray-500 hover:text-gray-300')}
+            >
+              {severity}
+            </button>
           ))}
         </div>
-        <select
-          value={categoryFilter}
-          onChange={e => setCategoryFilter(e.target.value as FindingCategory | 'all')}
-          className="input text-xs py-2 pr-8"
-        >
-          {categoryFilters.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+        <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="input text-xs py-2 pr-8">
+          {categoryFilters.map((category) => <option key={category} value={category}>{category}</option>)}
         </select>
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value as FindingStatus | 'all')}
-          className="input text-xs py-2 pr-8"
-        >
-          {statusFilters.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-        </select>
-        <span className="text-xs text-gray-600 ml-auto">{filtered.length} findings</span>
+        <span className="text-xs text-gray-600 ml-auto">{filteredFindings.length} findings</span>
       </div>
 
-      {/* Findings table */}
       <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/[0.05]">
-                {['Severity', 'Title', 'Category', 'CVE ID', 'CVSS', 'Resource', 'Cluster', 'Status', 'Found', ''].map(h => (
-                  <th key={h} className="text-left text-[10px] text-gray-600 font-medium uppercase tracking-wider px-4 py-3 first:pl-5 last:pr-5">{h}</th>
+        <CardHeader title="Security Findings" subtitle="OPA, static analysis, and AI-enriched remediation" icon={<AlertTriangle className="w-3.5 h-3.5" />} />
+        {isLoading ? (
+          <div className="p-8 text-sm text-gray-500">Loading Terraform findings...</div>
+        ) : filteredFindings.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/[0.05]">
+                  {['Severity', 'Rule', 'Finding', 'Category', 'Resource', 'Scanner', 'Confidence', 'Found'].map((header) => (
+                    <th key={header} className="text-left text-[10px] text-gray-600 font-medium uppercase tracking-wider px-4 py-3 first:pl-5">{header}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {filteredFindings.map((finding) => (
+                  <motion.tr
+                    key={finding.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={clsx('hover:bg-white/[0.02] transition-colors cursor-pointer', selectedFinding?.id === finding.id && 'bg-brand-500/5')}
+                    onClick={() => setSelectedFinding(selectedFinding?.id === finding.id ? null : finding)}
+                  >
+                    <td className="px-4 py-3 pl-5"><Badge value={finding.severity} dot size="xs" /></td>
+                    <td className="px-4 py-3"><span className="text-[10px] font-mono text-sky-400">{finding.rule_id ?? 'policy'}</span></td>
+                    <td className="px-4 py-3 max-w-md">
+                      <p className="text-xs text-gray-200 font-medium leading-snug">{finding.title}</p>
+                      <p className="text-[11px] text-gray-600 mt-0.5 line-clamp-1">{finding.description}</p>
+                    </td>
+                    <td className="px-4 py-3"><span className="text-xs text-gray-500 capitalize">{finding.category}</span></td>
+                    <td className="px-4 py-3"><span className="text-xs text-gray-500 font-mono">{finding.resource_address ?? finding.file_path ?? 'workspace'}</span></td>
+                    <td className="px-4 py-3"><span className="text-xs text-gray-600">{finding.scanner}</span></td>
+                    <td className="px-4 py-3"><span className="text-xs text-gray-500 font-mono">{Math.round((finding.confidence_score ?? 0) * 100)}%</span></td>
+                    <td className="px-4 py-3"><span className="text-xs text-gray-600">{formatDistanceToNow(new Date(finding.created_at), { addSuffix: true })}</span></td>
+                  </motion.tr>
                 ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.04]">
-              {filtered.map(f => (
-                <motion.tr
-                  key={f.id}
-                  layout
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className={clsx('group hover:bg-white/[0.02] transition-colors cursor-pointer', selected === f.id && 'bg-brand-500/5')}
-                  onClick={() => setSelected(selected === f.id ? null : f.id)}
-                >
-                  <td className="px-4 py-3 pl-5"><Badge value={f.severity} dot size="xs" /></td>
-                  <td className="px-4 py-3 max-w-xs">
-                    <p className="text-xs text-gray-200 font-medium leading-snug line-clamp-2">{f.title}</p>
-                  </td>
-                  <td className="px-4 py-3"><span className="text-xs text-gray-500">{categoryLabel[f.category] ?? f.category}</span></td>
-                  <td className="px-4 py-3"><span className="text-[10px] font-mono text-sky-400">{f.cveId ?? '—'}</span></td>
-                  <td className="px-4 py-3"><span className={clsx('text-xs font-mono font-semibold', (f.cvssScore ?? 0) >= 9 ? 'text-red-400' : (f.cvssScore ?? 0) >= 7 ? 'text-orange-400' : 'text-amber-400')}>{f.cvssScore?.toFixed(1) ?? '—'}</span></td>
-                  <td className="px-4 py-3"><span className="text-xs text-gray-500 font-mono">{f.resource}</span></td>
-                  <td className="px-4 py-3"><span className="text-xs text-gray-600 font-mono">{f.cluster}</span></td>
-                  <td className="px-4 py-3"><Badge value={f.status} size="xs" /></td>
-                  <td className="px-4 py-3"><span className="text-xs text-gray-600">{formatDistanceToNow(new Date(f.createdAt), { addSuffix: true })}</span></td>
-                  <td className="px-4 py-3 pr-5">
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                      <button className="p-1 rounded hover:bg-surface-300 text-gray-500 hover:text-gray-300" title="View details">
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      <button className="p-1 rounded hover:bg-surface-300 text-gray-500 hover:text-gray-300" title="External link">
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-          {filtered.length === 0 && (
-            <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <Shield className="w-10 h-10 text-emerald-500/30" />
-              <p className="text-gray-500 text-sm">No findings match your filters</p>
-            </div>
-          )}
-        </div>
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState text="No Terraform findings yet. Run the demo analysis to populate this dashboard." />
+        )}
       </Card>
 
-      {/* Detail panel */}
+      <Card>
+        <CardHeader title="Drift Dashboard" subtitle="Desired Terraform state compared with ingested actual state" icon={<GitBranch className="w-3.5 h-3.5" />} />
+        {drift.length ? (
+          <div className="divide-y divide-white/[0.04]">
+            {drift.map((item) => <DriftRow key={item.id} item={item} />)}
+          </div>
+        ) : (
+          <EmptyState text="No drift records found for the current Terraform workspaces." />
+        )}
+      </Card>
+
       {selectedFinding && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
           <Card>
             <CardHeader
               title={selectedFinding.title}
-              subtitle={selectedFinding.cveId ?? `Finding ${selectedFinding.id}`}
-              icon={<Shield className="w-3.5 h-3.5 text-amber-400" />}
+              subtitle={selectedFinding.rule_id ?? selectedFinding.id}
+              icon={<Bot className="w-3.5 h-3.5 text-sky-400" />}
               actions={
                 <div className="flex items-center gap-2">
                   <Badge value={selectedFinding.severity} dot />
-                  <Badge value={selectedFinding.status} />
-                  <button onClick={() => setSelected(null)} className="btn-secondary text-xs py-1 px-2">Close</button>
+                  <button onClick={() => setSelectedFinding(null)} className="btn-secondary text-xs py-1 px-2">Close</button>
                 </div>
               }
             />
-            <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 space-y-4">
-                <div>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Description</h4>
-                  <p className="text-sm text-gray-300 leading-relaxed">{selectedFinding.description}</p>
-                </div>
-                {selectedFinding.remediationAvailable && (
-                  <div>
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Remediation</h4>
-                    <p className="text-sm text-gray-300 leading-relaxed">Automated remediation is available for this finding. Click &ldquo;Apply Fix&rdquo; to start the remediation workflow.</p>
-                  </div>
-                )}
+            <div className="p-5 grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div className="xl:col-span-2 space-y-4">
+                <DetailBlock title="Description" value={selectedFinding.description} />
+                <DetailBlock title="Impact" value={selectedFinding.impact ?? 'Impact not provided.'} />
+                <DetailBlock title="AI Explanation" value={selectedFinding.ai_explanation ?? 'No AI explanation available.'} />
+                <DetailBlock title="Remediation" value={selectedFinding.remediation ?? 'Review and remediate according to the rule guidance.'} />
               </div>
               <div className="space-y-3 text-xs">
                 {[
-                  ['Category', categoryLabel[selectedFinding.category]],
-                  ['CVE ID', selectedFinding.cveId ?? '—'],
-                  ['CVSS Score', selectedFinding.cvssScore?.toFixed(1) ?? '—'],
-                  ['Affected Resource', selectedFinding.resource],
-                  ['Cluster', selectedFinding.cluster],
-                  ['Discovered', format(new Date(selectedFinding.createdAt), 'MMM d, yyyy HH:mm')],
+                  ['Category', selectedFinding.category],
+                  ['Scanner', selectedFinding.scanner],
+                  ['Resource', selectedFinding.resource_address ?? 'workspace'],
+                  ['File', selectedFinding.file_path ?? '-'],
+                  ['Line', selectedFinding.line_number?.toString() ?? '-'],
+                  ['Confidence', `${Math.round((selectedFinding.confidence_score ?? 0) * 100)}%`],
                 ].map(([label, value]) => (
-                  <div key={label as string} className="flex justify-between border-b border-white/[0.04] pb-2 last:border-0">
-                    <span className="text-gray-600">{label as string}</span>
-                    <span className="text-gray-300 font-medium font-mono">{value as string}</span>
+                  <div key={label} className="flex justify-between border-b border-white/[0.04] pb-2 last:border-0">
+                    <span className="text-gray-600">{label}</span>
+                    <span className="text-gray-300 font-medium font-mono text-right">{value}</span>
                   </div>
                 ))}
               </div>
@@ -299,4 +300,67 @@ export default function Security() {
       )}
     </div>
   )
+}
+
+function SummaryCard({ label, value, sub, tone }: { label: string; value: string | number; sub: string; tone: string }) {
+  return (
+    <Card className="p-5">
+      <p className={clsx('text-2xl font-bold tabular-nums', tone)}>{value}</p>
+      <p className="text-xs text-gray-400 font-medium mt-0.5">{label}</p>
+      <p className="text-xs text-gray-600 mt-0.5">{sub}</p>
+    </Card>
+  )
+}
+
+function MiniMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg bg-surface-200 border border-white/[0.05] p-3">
+      <p className="text-lg font-semibold text-gray-100 tabular-nums">{value}</p>
+      <p className="text-[10px] text-gray-600 uppercase tracking-wide">{label}</p>
+    </div>
+  )
+}
+
+function DriftRow({ item }: { item: TerraformDrift }) {
+  return (
+    <div className="px-5 py-4 flex items-start gap-4">
+      <GitBranch className="w-4 h-4 text-amber-400 mt-1 flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <Badge value={item.severity} dot size="xs" />
+          <span className="text-xs text-gray-500 font-mono">{item.resource_address}</span>
+        </div>
+        <p className="text-sm text-gray-200">{item.description}</p>
+        <p className="text-xs text-gray-600 mt-1">
+          {item.attribute_path}: desired <code>{JSON.stringify(item.desired_value)}</code>, actual <code>{JSON.stringify(item.actual_value)}</code>
+        </p>
+      </div>
+      <Badge value={item.status} size="xs" />
+    </div>
+  )
+}
+
+function DetailBlock({ title, value }: { title: string; value: string }) {
+  return (
+    <div>
+      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{title}</h4>
+      <p className="text-sm text-gray-300 leading-relaxed">{value}</p>
+    </div>
+  )
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center gap-3 py-14 text-center">
+      <CheckCircle2 className="w-10 h-10 text-emerald-500/25" />
+      <p className="text-gray-500 text-sm">{text}</p>
+    </div>
+  )
+}
+
+function severityColor(severity: string) {
+  if (severity === 'critical') return 'bg-red-500'
+  if (severity === 'high') return 'bg-orange-500'
+  if (severity === 'medium') return 'bg-amber-500'
+  return 'bg-sky-500'
 }

@@ -210,6 +210,7 @@ Response:
 - [Infrastructure Discovery](docs/infrastructure-discovery.md)
 - [Observability & Telemetry](docs/observability-telemetry.md)
 - [AI Investigation Engine](docs/ai-investigation-engine.md)
+- [Terraform Security & Drift](docs/terraform-security-drift.md)
 - [API Reference](docs/api.md)
 - [Developer Onboarding](docs/onboarding.md)
 - [Deployment Guide](docs/deployment.md)
