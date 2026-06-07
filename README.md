@@ -17,6 +17,8 @@ NexusOps AI is a production-grade AIOps platform that brings together Kubernetes
 
 Inspired by platforms like Datadog, IBM Cloud Pak for Watson AIOps, and Red Hat Advanced Cluster Management, NexusOps AI is designed for engineering teams operating at scale across multi-cluster, multi-cloud environments.
 
+The project is intentionally built as an engineering showcase, not a CRUD demo. It demonstrates provider abstractions, typed APIs, service/repository layering, async workflows, infrastructure discovery, telemetry ingestion, policy evaluation, AI fallbacks, and deployment-ready packaging.
+
 ---
 
 ## Core Capabilities
@@ -28,9 +30,25 @@ Inspired by platforms like Datadog, IBM Cloud Pak for Watson AIOps, and Red Hat 
 | **AI Incident Investigation** | LLM-powered root cause analysis, failure correlation, remediation generation |
 | **Terraform Security Analysis** | Drift detection, IAM/RBAC risk scanning, OPA policy evaluation |
 | **Cost Optimization Engine** | Resource utilization analysis, overprovisioning detection, savings recommendations |
-| **AI Remediation Engine** | Kubernetes YAML patch generation, Terraform fix suggestions, PR abstraction |
-| **RAG Infrastructure Intelligence** | Vector-indexed manifests, logs, incidents for semantic infrastructure Q&A |
-| **Real-time Dashboard** | WebSocket-powered cluster/incident/security/cost dashboards |
+| **AI Remediation Engine** | Kubernetes remediation guidance and Terraform fix suggestions |
+| **RAG Infrastructure Intelligence** | Vector-indexed incidents, telemetry, and investigation history |
+| **Enterprise Dashboard** | API-backed cluster, telemetry, incident, security, and cost dashboards |
+
+---
+
+## Screenshots
+
+| Dashboard | Infrastructure |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Infrastructure](docs/screenshots/infrastructure.png) |
+
+| Incidents | Security |
+|---|---|
+| ![Incidents](docs/screenshots/incidents.png) | ![Security](docs/screenshots/security.png) |
+
+| Cost Optimization | AI Investigation |
+|---|---|
+| ![Cost Optimization](docs/screenshots/cost-optimization.png) | ![AI Investigation](docs/screenshots/ai-investigation.png) |
 
 ---
 
@@ -103,6 +121,7 @@ cp .env.example .env
 make dev
 # or
 docker compose up -d
+docker compose exec api alembic upgrade head
 ```
 
 ### 3. Access Services
@@ -116,7 +135,25 @@ docker compose up -d
 | Prometheus | http://localhost:9090 |
 | Qdrant UI | http://localhost:6333/dashboard |
 
-### 4. Development Setup
+### 4. Demo Data
+
+After registering and logging in, use the UI demo buttons or the API demo endpoints to generate portfolio data:
+
+```bash
+TOKEN="<access-token-from-/api/v1/auth/login>"
+
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8000/api/v1/demo/generate
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8000/api/v1/demo/telemetry/generate
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8000/api/v1/demo/incidents/generate
+curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -X POST http://localhost:8000/api/v1/terraform/analyze -d '{"demo":true}'
+curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -X POST http://localhost:8000/api/v1/optimization/analyze -d '{"demo":true}'
+```
+
+See [Demo Scenarios](docs/demo-scenarios.md) for the full authenticated workflow and expected outcomes.
+
+### 5. Development Setup
 
 ```bash
 # Backend
@@ -131,6 +168,16 @@ uvicorn app.main:app --reload
 cd frontend
 npm install
 npm run dev
+```
+
+### 6. Quality Gate
+
+```bash
+docker compose config --quiet
+docker compose exec api alembic upgrade head
+docker compose exec api ruff check app tests
+docker compose exec api pytest -q
+cd frontend && npm run lint && npm run test && npm run build
 ```
 
 ---
@@ -212,9 +259,23 @@ Response:
 - [AI Investigation Engine](docs/ai-investigation-engine.md)
 - [Terraform Security & Drift](docs/terraform-security-drift.md)
 - [Cost Optimization & Resource Intelligence](docs/cost-optimization-resource-intelligence.md)
+- [Demo Scenarios](docs/demo-scenarios.md)
 - [API Reference](docs/api.md)
 - [Developer Onboarding](docs/onboarding.md)
 - [Deployment Guide](docs/deployment.md)
+
+---
+
+## CI/CD
+
+GitHub Actions validates:
+
+- backend Ruff linting
+- backend compile checks
+- Alembic migrations
+- backend tests and API smoke tests
+- frontend TypeScript, lint, tests, and production build
+- Docker Compose config and production image builds
 
 ---
 

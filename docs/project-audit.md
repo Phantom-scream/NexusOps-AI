@@ -1,162 +1,74 @@
 # NexusOps AI Repository Audit
 
-Date: 2026-05-31
+Date: 2026-06-07
 
 ## Executive Summary
 
-NexusOps AI is not an empty scaffold. The repository already contains a credible monorepo foundation with a FastAPI backend, React/Vite frontend, Docker Compose development topology, Kubernetes manifests, observability configuration, OPA policy samples, and GitHub Actions workflows.
+NexusOps AI is now a multi-domain AIOps and infrastructure intelligence platform with a real FastAPI backend, React enterprise console, Docker Compose stack, Kubernetes manifests, CI/CD workflows, demo providers, and production-style service/repository boundaries.
 
-The current implementation is best described as an early enterprise platform foundation plus a mostly complete mock-driven dashboard shell. Backend domain boundaries exist for clusters and incidents, while security and cost modules are still closer to route-level prototypes. Frontend architecture now includes a professional dark cloud-operations shell, realistic demo data, typed UI models, reusable cards, badges, status dots, charts, and pages for the required platform areas.
-
-The next engineering priority should be converting the dashboard from static mock data to typed API-backed React Query flows, while hardening backend service boundaries and local validation.
+The platform supports Kubernetes infrastructure discovery, topology management, telemetry ingestion, AI incident investigation, Terraform security/drift analysis, and cost optimization. Phase 9 focused on hardening: repo-wide backend Ruff debt was reduced to zero, backend tests were expanded, CI gates were tightened, deployment manifests were repaired, architecture/demo/deployment docs were added, and portfolio screenshots were generated.
 
 ## Implemented
 
 ### Backend
 
-- FastAPI application factory with health endpoint, CORS, gzip, request ID middleware, rate limiting, global exception handling, Prometheus instrumentation, and OpenTelemetry tracing hooks.
-- Central Pydantic settings model with database, Redis, Celery, Qdrant, Kafka, Kubernetes, AI, security, CORS, and logging configuration.
-- Async SQLAlchemy setup with `AsyncSession`, base model mixins, and repository pattern.
-- Domain models for users, clusters, Kubernetes resources, incidents, incident analyses, security findings, Terraform scans, and cost recommendations.
-- Auth endpoints for registration, login, refresh, and current user lookup using JWT and bcrypt.
-- Cluster API with service and repository layers for registration, listing, update, deletion, sync trigger, workloads, and summaries.
-- Incident API with service and repository layers for listing, creation, updates, resolution, stats, async investigation trigger, and analysis retrieval.
-- AI layer with LLM abstraction, incident investigation engine, prompt templates, and Qdrant-backed RAG pipeline.
-- Celery worker configuration and task modules for cluster sync and analysis workflows.
-- Kubernetes client capable of reading cluster info, workloads, events, and pod logs.
-- Initial backend tests for auth and clusters.
+- FastAPI application factory with health checks, CORS, gzip, request IDs, rate limiting, exception handling, Prometheus metrics, and OpenTelemetry hooks.
+- Pydantic settings for database, Redis, Celery, Qdrant, Kafka, Kubernetes, AI, OPA, CORS, and logging.
+- Async SQLAlchemy, Alembic migrations, repository layer, and typed Pydantic schemas.
+- Authentication with JWT registration, login, refresh, and current-user lookup.
+- Infrastructure provider abstraction with Kubernetes and demo providers.
+- Persistent topology for clusters, namespaces, nodes, deployments/workloads, pods, services, and ReplicaSets.
+- Telemetry models and APIs for metrics, logs, infrastructure events, traces, and telemetry sources.
+- AI investigation pipeline with evidence collection, context building, OpenAI/Ollama abstraction, deterministic fallback, remediation recommendations, and persisted investigation history.
+- Terraform analysis engine with HCL parsing, demo environments, static security rules, OPA evaluation fallback, drift detection, AI-style explanations, and typed APIs.
+- Cost optimization engine with utilization snapshots, deterministic rules, findings, recommendations, reports, savings estimates, and typed APIs.
+- Celery workers and beat scheduler for async platform workflows.
 
 ### Frontend
 
-- React 18, TypeScript, Vite, TailwindCSS, React Query, Zustand, Recharts, Framer Motion, and lucide-react are configured.
-- Routing exists for login, dashboard, clusters, incidents, security, cost optimization, and AI investigation.
-- Auth store persists token, refresh token, email, and role.
-- API client attaches JWT tokens and handles 401 logout.
-- Enterprise dashboard shell exists with sidebar navigation, top navigation, dashboard overview, infrastructure cards, incident panel, service health, metrics cards, charts, and dark theme.
-- Mock data is realistic and covers clusters, incidents, security findings, cost recommendations, service health, and trend series.
-- Reusable UI components exist for cards, headers, badges, status dots, progress bars, skeletons, and charts.
+- React 18, TypeScript, Vite, TailwindCSS, React Query, Zustand, Recharts, Framer Motion, and lucide-react.
+- Auth-gated enterprise console with sidebar, top navigation, dashboard, infrastructure, incidents, security, cost optimization, and AI investigation pages.
+- API-backed service clients for infrastructure, telemetry, incidents, investigations, Terraform, and optimization.
+- Reusable UI primitives for cards, headers, badges, status dots, progress bars, skeletons, and charts.
+- Dark enterprise theme and generated screenshots for portfolio presentation.
 
 ### Infrastructure
 
-- Dockerfiles exist for backend and frontend with development and production targets.
-- Docker Compose includes API, Celery worker, beat scheduler, frontend, PostgreSQL, Redis, Qdrant, Redpanda, Redpanda Console, Prometheus, Grafana, Loki, OTel collector, and OPA.
-- Kubernetes manifests exist for namespace, config map, deployments, and services.
-- Observability configs exist for Prometheus and OpenTelemetry collector.
-- OPA policy sample exists for Terraform security checks.
-- Makefile provides common development, test, lint, migration, Docker, and Kubernetes commands.
-- CI and CD workflow files exist.
+- Docker Compose stack for API, workers, frontend, PostgreSQL, Redis, Qdrant, Redpanda, Prometheus, Grafana, Loki, OTel Collector, and OPA.
+- Backend and frontend Dockerfiles with development and production targets.
+- Kubernetes manifests for namespace, config, secrets placeholders, frontend/API/worker deployments, services, ingress, service account, and discovery RBAC.
+- Prometheus, OpenTelemetry Collector, and OPA policy configuration.
+- GitHub Actions CI for backend lint/compile/migrations/tests/API smoke, frontend type/lint/test/build, Compose validation, and production Docker builds.
+- CD workflow for GHCR backend/frontend image publishing.
 
-## Partially Implemented
+## Phase 9 Hardening Results
 
-### Backend Architecture
+- Backend repo-wide Ruff status: clean.
+- Backend tests increased from 16 to 27 tests.
+- Added hardening tests for demo topology, evidence extraction, AI fallback parsing, Terraform parsing/security/drift helpers, and optimization cost logic.
+- CI no longer treats frontend lint as optional.
+- CI now validates Alembic migrations and API smoke tests.
+- Compose warning for obsolete `version` field removed.
+- PostgreSQL init mount corrected to a real init directory.
+- Kubernetes deployment gaps fixed by adding frontend Deployment and demo-safe Secret placeholders.
+- README upgraded with screenshots, demo guide, quality gate, and accurate documentation links.
+- Architecture, API, onboarding, deployment, demo scenario, and screenshot docs added.
 
-- Clusters and incidents follow the intended controller-service-repository shape.
-- Security and cost routes use generic repositories directly and need dedicated service and repository layers.
-- API schemas exist for several domains, but some route responses are still ad hoc dictionaries.
-- Dependency injection is present through FastAPI dependencies, but service construction is manual per route.
-- AI and RAG abstractions are real, but missing-provider behavior needs a demo-safe mode so local development does not fail when OpenAI or Qdrant are unavailable.
-- Kubernetes discovery exists, but the SDK calls are synchronous inside task workflows rather than fully async.
-- Alembic is configured, but no migrations are present in the repository.
+## Remaining Risks
 
-### Frontend Architecture
+- Frontend has no component/unit test coverage yet; current frontend test command passes with no test files.
+- Mypy remains advisory in CI with `continue-on-error`; turning it strict will require a dedicated typing pass.
+- Redis-backed distributed rate limiting is still a future hardening item.
+- Helm chart is referenced as a future deployment path but is not yet present.
+- Grafana provisioning directory is referenced by Docker Compose but dashboard provisioning is not yet implemented.
+- LLM and Qdrant integrations use deterministic fallbacks for demos; production retrieval quality still needs real corpus management and provider monitoring.
 
-- The dashboard shell is visually strong and modular, but currently mock-driven.
-- React Query is installed and configured, but the new pages do not yet use it for live backend data.
-- API service TypeScript contracts do not fully match backend schemas yet.
-- Auth role handling after login is hardcoded to `viewer` rather than decoded from token claims or returned user data.
-- Responsive behavior is generally good, but dense filter groups and tables need mobile QA in browser.
+## Recommended Next Work
 
-### Infrastructure and DevEx
-
-- Docker Compose is ambitious and enterprise-shaped, but some referenced folders are missing, including Grafana provisioning.
-- README references docs, Helm, Terraform, and GitHub workflow paths that are only partially present.
-- CI expects `frontend/package-lock.json`, but the repository currently does not track one.
-- Frontend lint script exists, but no ESLint config file is present.
-- Backend validation depends on Python 3.12, while the local machine currently exposes Python 3.13 without installed project dependencies.
-
-## Missing
-
-- Seed data and demo credentials for local product evaluation.
-- Alembic migration revisions.
-- Dedicated security and cost service/repository layers.
-- Dashboard API aggregation endpoint.
-- Live frontend data fetching for dashboard, infrastructure, incidents, security, cost, and AI modules.
-- WebSocket client integration for AI streaming.
-- Terraform directory and drift detection implementation.
-- Helm chart directory.
-- Docs referenced by README: architecture, API, onboarding, and deployment.
-- Grafana provisioning files referenced by Docker Compose.
-- Full test coverage for security, cost, AI, workers, middleware, and frontend components.
-- Production-grade rate limiting using Redis.
-- Structured error response schemas.
-- CI fix for missing lockfile and lint config.
-
-## Quality Risks
-
-- The default development startup attempts to start Kafka and other services. Local API tests can become brittle unless external integrations are optional or mocked in test mode.
-- Pydantic and ORM enums are mostly stored as strings. That is acceptable for speed, but schema validation should enforce allowed values consistently.
-- `BaseRepository.get_all` assumes every model has `created_at`, which is currently true but implicit.
-- The in-memory rate limiter is not multi-process or distributed-safe.
-- Qdrant and LLM failures are caught in some retrieval paths, but direct AI query flows can still fail hard without provider configuration.
-- The frontend environment variable naming is inconsistent: Docker Compose sets `VITE_API_BASE_URL`, while the API client reads `VITE_API_URL`.
-- The current dashboard milestone uses randomized mock time series, so visuals change across reloads and are not deterministic for screenshots or tests.
-
-## Recommended Roadmap
-
-### Phase 3 Completion: Enterprise Dashboard Shell
-
-1. Keep the current shell and finish validation fixes.
-2. Add package lockfile and lint configuration.
-3. Add browser QA for desktop and mobile layouts.
-4. Add demo login or seed user flow.
-5. Document current architecture and dashboard milestone.
-
-### Phase 4: Kubernetes Infrastructure Discovery
-
-1. Add Alembic migrations for current models.
-2. Add seed/demo cluster data.
-3. Harden Kubernetes sync tasks and persist nodes, namespaces, and workloads, not only cluster summary fields.
-4. Add dashboard aggregation endpoints for cluster health and capacity.
-5. Connect frontend Infrastructure and Dashboard pages through React Query.
-
-### Phase 5: Observability Pipeline
-
-1. Completed persistent telemetry schemas for metrics, logs, infrastructure events, traces, and telemetry sources.
-2. Completed provider-neutral telemetry ingestion with demo generation plus Prometheus/OpenTelemetry provider scaffolds.
-3. Completed global and cluster-scoped telemetry APIs.
-4. Connected dashboard observability panels to backend telemetry through React Query.
-5. Remaining: implement full Prometheus/Loki query clients and provision Grafana dashboards used by Docker Compose.
-
-### Phase 6: AI Incident Investigation
-
-1. Completed persistent investigation runs and normalized investigation evidence.
-2. Completed context building from topology, incidents, metrics, logs, events, and traces.
-3. Completed OpenAI/Ollama provider abstraction with deterministic fallback for demo-safe local usage.
-4. Completed remediation recommendation engine and incident update flow.
-5. Completed AI Investigation frontend backed by live APIs.
-6. Remaining: add token streaming for investigation progress and broaden RAG indexing coverage.
-
-### Phase 7: Terraform Security and Drift
-
-1. Completed OPA and OpenTelemetry Collector stabilization with healthchecks.
-2. Completed Terraform workspace, resource, finding, drift, scan, and policy violation persistence.
-3. Completed HCL parsing, demo Terraform ingestion, deterministic security checks, OPA evaluation with local fallback, and drift detection.
-4. Completed AI-style finding explanations with OpenAI/Ollama extension points and deterministic fallback.
-5. Completed `/terraform` APIs and Security frontend integration through React Query.
-6. Remaining: add real VCS directory import, richer Terraform state backends, Trivy/checkov-style adapters, and remediation PR workflows.
-
-### Phase 8: Cost Optimization
-
-1. Completed ResourceUtilization, OptimizationRule, OptimizationFinding, OptimizationReport, and enriched CostRecommendation persistence.
-2. Completed deterministic optimization rules for CPU oversizing, memory oversizing, excessive replicas, idle services, missing autoscaling, and restart waste.
-3. Completed telemetry/topology-backed analysis with demo optimization scenarios and estimated savings.
-4. Completed AI-style explanations with OpenAI/Ollama extension points and deterministic fallback.
-5. Completed `/optimization` APIs and React Query-backed Cost Optimization frontend.
-6. Remaining: add cloud-provider pricing adapters, VPA/HPA recommendation simulation, approval workflows, and PR-based remediation.
-
-### Phase 9: Production Deployment
-
-1. Add Helm chart.
-2. Complete Terraform infrastructure examples.
-3. Harden secrets, RBAC, network policies, and non-root containers.
-4. Expand CI/CD with integration tests, image scanning, and deployment promotion.
+1. Add frontend tests for route guards, API-backed pages, and chart empty/error states.
+2. Add Helm chart or remove Helm commands until chart scaffolding exists.
+3. Add Grafana provisioning dashboards for platform telemetry.
+4. Convert mypy from advisory to required after a focused typing cleanup.
+5. Add image scanning and SBOM generation to CI/CD.
+6. Add Redis-backed rate limiting and structured API error schemas.
+7. Add real Prometheus/Loki query clients beyond the provider scaffolds.
