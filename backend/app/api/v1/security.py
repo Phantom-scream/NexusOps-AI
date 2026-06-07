@@ -3,12 +3,14 @@ NexusOps AI — Security API
 """
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import CurrentUser, get_current_user
+from app.core.security import CurrentUser, get_current_user, require_security_analyst
+from app.models.audit import AuditEvent
 from app.models.security_finding import SecurityFinding, TerraformScan
+from app.repositories.audit_repository import AuditRepository
 from app.repositories.base import BaseRepository
 from app.schemas.security import (
     SecurityFindingListResponse,
@@ -16,6 +18,7 @@ from app.schemas.security import (
     TerraformScanOut,
     TerraformScanRequest,
 )
+from app.services.audit_service import AuditService
 
 router = APIRouter()
 
@@ -85,13 +88,11 @@ async def get_security_dashboard(
 @router.post("/terraform/scan", status_code=status.HTTP_202_ACCEPTED)
 async def trigger_terraform_scan(
     request: TerraformScanRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_security_analyst),
 ):
     """Submit a Terraform configuration for AI security analysis."""
-    if not current_user.is_operator:
-        raise HTTPException(status_code=403, detail="Operator role required")
-
     if not request.terraform_content:
         raise HTTPException(status_code=400, detail="terraform_content is required")
 
@@ -114,6 +115,14 @@ async def trigger_terraform_scan(
         repo_url=request.repository_url,
     )
 
+    await AuditService(AuditRepository(model=AuditEvent, session=db)).record(
+        action="security.terraform_scan",
+        actor=current_user,
+        request=http_request,
+        resource_type="terraform_scan",
+        resource_id=scan.id,
+        metadata={"scan_name": scan.scan_name, "repository_url": scan.repository_url},
+    )
     return TerraformScanOut.model_validate(scan)
 
 

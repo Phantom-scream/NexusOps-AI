@@ -94,6 +94,8 @@ class Settings(BaseSettings):
     JWT_AUDIENCE: str = "nexusops-api"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    DEFAULT_REGISTERED_ROLE: str = "viewer"
+    DEFAULT_DEVELOPMENT_REGISTERED_ROLE: str = "operator"
 
     # Comma-separated string to avoid pydantic-settings v2 JSON-decode issues with List[str]
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
@@ -141,6 +143,12 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.APP_ENV == "development"
+
+    @property
+    def default_registered_role(self) -> str:
+        if self.is_production:
+            return self.DEFAULT_REGISTERED_ROLE
+        return self.DEFAULT_DEVELOPMENT_REGISTERED_ROLE
 
     def validate_production_safety(self) -> None:
         """Block common unsafe production configuration mistakes at startup."""

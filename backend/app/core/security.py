@@ -12,6 +12,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
+from app.models.user import UserRole
 
 logger = structlog.get_logger(__name__)
 
@@ -119,11 +120,23 @@ class CurrentUser:
 
     @property
     def is_admin(self) -> bool:
-        return self.role in ("admin", "super_admin")
+        return self.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN)
 
     @property
     def is_operator(self) -> bool:
-        return self.role in ("admin", "super_admin", "operator")
+        return self.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.OPERATOR)
+
+    @property
+    def is_security_analyst(self) -> bool:
+        return self.role in (
+            UserRole.ADMIN,
+            UserRole.SUPER_ADMIN,
+            UserRole.OPERATOR,
+            UserRole.SECURITY_ANALYST,
+        )
+
+    def has_any_role(self, *roles: str) -> bool:
+        return self.role in roles or self.role == UserRole.SUPER_ADMIN
 
 
 async def get_current_user(
@@ -169,3 +182,30 @@ async def require_operator(current_user: CurrentUser = Depends(get_current_user)
             detail="Operator privileges required",
         )
     return current_user
+
+
+async def require_security_analyst(
+    current_user: CurrentUser = Depends(get_current_user),
+) -> CurrentUser:
+    """Require security analyst, operator, or admin role."""
+    if not current_user.is_security_analyst:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Security analyst privileges required",
+        )
+    return current_user
+
+
+def require_roles(*roles: str):
+    """Return a FastAPI dependency requiring one of the supplied roles."""
+    allowed = tuple(roles)
+
+    async def dependency(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+        if not current_user.has_any_role(*allowed):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Required role: one of {', '.join(allowed)}",
+            )
+        return current_user
+
+    return dependency

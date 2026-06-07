@@ -1,13 +1,14 @@
 """Observability telemetry API."""
 
-
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import CurrentUser, get_current_user
+from app.core.security import CurrentUser, get_current_user, require_operator
+from app.models.audit import AuditEvent
 from app.models.cluster import Cluster
 from app.models.telemetry import TelemetrySource
+from app.repositories.audit_repository import AuditRepository
 from app.repositories.cluster_repository import ClusterRepository
 from app.repositories.telemetry_repository import TelemetryRepository
 from app.schemas.telemetry import (
@@ -19,6 +20,7 @@ from app.schemas.telemetry import (
     TelemetrySummaryOut,
     TraceOut,
 )
+from app.services.audit_service import AuditService
 from app.services.telemetry_service import TelemetryService
 
 router = APIRouter()
@@ -206,11 +208,21 @@ async def list_cluster_traces(
 
 @router.post("/demo/telemetry/generate", response_model=DemoTelemetryResponse)
 async def generate_demo_telemetry(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
     service: TelemetryService = Depends(get_telemetry_service),
-    _: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_operator),
 ):
     """Generate demo telemetry from persisted demo or Kubernetes topology."""
     source, counts = await service.generate_demo_telemetry()
+    await AuditService(AuditRepository(model=AuditEvent, session=db)).record(
+        action="demo.telemetry_generate",
+        actor=current_user,
+        request=request,
+        resource_type="telemetry_source",
+        resource_id=source.id,
+        metadata=counts,
+    )
     return DemoTelemetryResponse(
         source=TelemetrySourceOut.model_validate(source),
         clusters=counts["clusters"],

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.incident_analyzer import IncidentInvestigationEngine
 from app.ai.rag_pipeline import RAGPipeline
 from app.core.database import get_db
-from app.core.security import CurrentUser, decode_token, get_current_user
+from app.core.security import CurrentUser, decode_token, get_current_user, require_operator
 from app.schemas.incident import AIInvestigateRequest, AIInvestigateResponse
 
 router = APIRouter()
@@ -23,7 +23,7 @@ investigation_engine = IncidentInvestigationEngine(rag_pipeline=rag_pipeline)
 async def investigate_infrastructure(
     request: AIInvestigateRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user),
+    _: CurrentUser = Depends(require_operator),
 ):
     """
     Synchronous AI incident investigation.

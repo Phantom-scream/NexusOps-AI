@@ -1,10 +1,12 @@
 """Terraform security and drift API."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import CurrentUser, get_current_user
+from app.core.security import CurrentUser, get_current_user, require_security_analyst
+from app.models.audit import AuditEvent
+from app.repositories.audit_repository import AuditRepository
 from app.schemas.terraform import (
     TerraformAnalysisResponse,
     TerraformAnalyzeRequest,
@@ -19,6 +21,7 @@ from app.schemas.terraform import (
     TerraformUploadRequest,
     TerraformWorkspaceOut,
 )
+from app.services.audit_service import AuditService
 from app.services.terraform_service import TerraformAnalysisService
 
 router = APIRouter()
@@ -31,28 +34,53 @@ def get_terraform_service(db: AsyncSession = Depends(get_db)) -> TerraformAnalys
 @router.post("/upload", response_model=TerraformWorkspaceOut, status_code=status.HTTP_201_CREATED)
 async def upload_terraform_directory(
     request: TerraformUploadRequest,
+    http_request: Request,
+    db: AsyncSession = Depends(get_db),
     service: TerraformAnalysisService = Depends(get_terraform_service),
-    _: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_security_analyst),
 ):
     """Ingest Terraform files into a workspace without running analysis."""
     try:
         workspace, _ = await service.upload(request)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    await AuditService(AuditRepository(model=AuditEvent, session=db)).record(
+        action="terraform.upload",
+        actor=current_user,
+        request=http_request,
+        resource_type="terraform_workspace",
+        resource_id=workspace.id,
+        metadata={"name": workspace.name, "source_type": workspace.source_type},
+    )
     return TerraformWorkspaceOut.model_validate(workspace)
 
 
 @router.post("/analyze", response_model=TerraformAnalysisResponse)
 async def analyze_terraform(
     request: TerraformAnalyzeRequest,
+    http_request: Request,
+    db: AsyncSession = Depends(get_db),
     service: TerraformAnalysisService = Depends(get_terraform_service),
-    _: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_security_analyst),
 ):
     """Analyze Terraform for security findings, policy violations, and drift."""
     try:
         workspace, scan, resources, findings, drift, policy_violations, stats = await service.analyze(request)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    await AuditService(AuditRepository(model=AuditEvent, session=db)).record(
+        action="terraform.analyze",
+        actor=current_user,
+        request=http_request,
+        resource_type="terraform_workspace",
+        resource_id=workspace.id,
+        metadata={
+            "scan_id": scan.id,
+            "findings": len(findings),
+            "drift": len(drift),
+            "policy_violations": len(policy_violations),
+        },
+    )
     return TerraformAnalysisResponse(
         workspace=TerraformWorkspaceOut.model_validate(workspace),
         scan=TerraformScanOut.model_validate(scan),

@@ -1,10 +1,12 @@
 """Cost optimization and resource intelligence API."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import CurrentUser, get_current_user
+from app.core.security import CurrentUser, get_current_user, require_operator
+from app.models.audit import AuditEvent
+from app.repositories.audit_repository import AuditRepository
 from app.schemas.optimization import (
     CostRecommendationListResponse,
     CostRecommendationOut,
@@ -17,6 +19,7 @@ from app.schemas.optimization import (
     OptimizationReportOut,
     ResourceUtilizationOut,
 )
+from app.services.audit_service import AuditService
 from app.services.optimization_service import OptimizationService
 
 router = APIRouter()
@@ -29,14 +32,28 @@ def get_optimization_service(db: AsyncSession = Depends(get_db)) -> Optimization
 @router.post("/analyze", response_model=OptimizationAnalysisResponse)
 async def analyze_optimization(
     request: OptimizationAnalyzeRequest,
+    http_request: Request,
+    db: AsyncSession = Depends(get_db),
     service: OptimizationService = Depends(get_optimization_service),
-    _: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_operator),
 ):
     """Run cost optimization analysis over infrastructure and telemetry."""
     try:
         report, findings, recommendations, utilization, stats = await service.analyze(request)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    await AuditService(AuditRepository(model=AuditEvent, session=db)).record(
+        action="optimization.analyze",
+        actor=current_user,
+        request=http_request,
+        resource_type="optimization_report",
+        resource_id=report.id,
+        metadata={
+            "findings": len(findings),
+            "recommendations": len(recommendations),
+            "estimated_monthly_savings_usd": report.estimated_monthly_savings_usd,
+        },
+    )
     return OptimizationAnalysisResponse(
         report=OptimizationReportOut.model_validate(report),
         findings=[OptimizationFindingOut.model_validate(item) for item in findings],

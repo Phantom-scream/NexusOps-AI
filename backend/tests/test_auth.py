@@ -2,8 +2,11 @@
 import pytest
 from httpx import AsyncClient
 from jose import jwt
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.models.audit import AuditEvent
 
 
 @pytest.mark.asyncio
@@ -101,4 +104,29 @@ async def test_refresh_preserves_database_role(client: AsyncClient):
         issuer=settings.JWT_ISSUER,
         audience=settings.JWT_AUDIENCE,
     )
-    assert decoded["role"] == "viewer"
+    assert decoded["role"] == settings.default_registered_role
+
+
+@pytest.mark.asyncio
+async def test_logout_records_audit_event(client: AsyncClient, db_session: AsyncSession):
+    payload = {
+        "email": "logout@nexusops.ai",
+        "username": "logoutuser",
+        "password": "Password1",
+    }
+    await client.post("/api/v1/auth/register", json=payload)
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": payload["email"], "password": payload["password"]},
+    )
+
+    resp = await client.post(
+        "/api/v1/auth/logout",
+        headers={"Authorization": f"Bearer {login.json()['access_token']}"},
+    )
+
+    assert resp.status_code == 204
+    result = await db_session.execute(
+        select(AuditEvent).where(AuditEvent.action == "auth.logout")
+    )
+    assert result.scalar_one().actor_email == payload["email"]

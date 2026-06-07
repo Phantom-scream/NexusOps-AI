@@ -1,4 +1,5 @@
 """NexusOps AI — Models Package"""
+from app.models.audit import AuditEvent
 from app.models.cluster import (
     Cluster,
     ClusterNode,
@@ -30,6 +31,7 @@ from app.models.terraform import (
 from app.models.user import User
 
 __all__ = [
+    "AuditEvent",
     "Cluster", "ClusterNode", "KubernetesNamespace", "KubernetesWorkload",
     "KubernetesReplicaSet", "KubernetesPod", "KubernetesService",
     "Incident", "IncidentAnalysis",

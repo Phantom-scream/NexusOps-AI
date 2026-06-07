@@ -2,12 +2,14 @@
 NexusOps AI — Clusters API
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import CurrentUser, get_current_user
+from app.core.security import CurrentUser, get_current_user, require_admin, require_operator
+from app.models.audit import AuditEvent
 from app.models.cluster import Cluster
+from app.repositories.audit_repository import AuditRepository
 from app.repositories.cluster_repository import ClusterRepository
 from app.schemas.cluster import (
     ClusterCreate,
@@ -24,6 +26,7 @@ from app.schemas.cluster import (
     SyncResponse,
     WorkloadOut,
 )
+from app.services.audit_service import AuditService
 from app.services.cluster_service import ClusterService
 
 router = APIRouter()
@@ -55,17 +58,25 @@ async def list_clusters(
 @router.post("", response_model=ClusterOut, status_code=status.HTTP_201_CREATED)
 async def register_cluster(
     data: ClusterCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
     service: ClusterService = Depends(get_cluster_service),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_operator),
 ):
     """Register a new Kubernetes cluster."""
-    if not current_user.is_operator:
-        raise HTTPException(status_code=403, detail="Operator role required")
     try:
         cluster = await service.register_cluster(data)
-        return ClusterOut.model_validate(cluster)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    await AuditService(AuditRepository(model=AuditEvent, session=db)).record(
+        action="cluster.register",
+        actor=current_user,
+        request=request,
+        resource_type="cluster",
+        resource_id=cluster.id,
+        metadata={"name": cluster.name, "provider": cluster.provider},
+    )
+    return ClusterOut.model_validate(cluster)
 
 
 @router.get("/{cluster_id}", response_model=ClusterDetailOut)
@@ -85,42 +96,60 @@ async def get_cluster(
 async def update_cluster(
     cluster_id: str,
     data: ClusterUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
     service: ClusterService = Depends(get_cluster_service),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_operator),
 ):
     """Update cluster metadata."""
-    if not current_user.is_operator:
-        raise HTTPException(status_code=403, detail="Operator role required")
     cluster = await service.update_cluster(cluster_id, data)
     if not cluster:
         raise HTTPException(status_code=404, detail="Cluster not found")
+    await AuditService(AuditRepository(model=AuditEvent, session=db)).record(
+        action="cluster.update",
+        actor=current_user,
+        request=request,
+        resource_type="cluster",
+        resource_id=cluster.id,
+        metadata=data.model_dump(exclude_unset=True),
+    )
     return ClusterOut.model_validate(cluster)
 
 
 @router.delete("/{cluster_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_cluster(
     cluster_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
     service: ClusterService = Depends(get_cluster_service),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_admin),
 ):
     """Deregister a cluster."""
-    if not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Admin role required")
+    cluster = await service.get_cluster(cluster_id)
+    if not cluster:
+        raise HTTPException(status_code=404, detail="Cluster not found")
     deleted = await service.delete_cluster(cluster_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Cluster not found")
+    await AuditService(AuditRepository(model=AuditEvent, session=db)).record(
+        action="cluster.delete",
+        actor=current_user,
+        request=request,
+        resource_type="cluster",
+        resource_id=cluster_id,
+        metadata={"name": cluster.name, "provider": cluster.provider},
+    )
 
 
 @router.post("/{cluster_id}/sync", response_model=SyncResponse, status_code=status.HTTP_202_ACCEPTED)
 async def trigger_cluster_sync(
     cluster_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
     service: ClusterService = Depends(get_cluster_service),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_operator),
 ):
     """Trigger an asynchronous cluster resource sync."""
-    if not current_user.is_operator:
-        raise HTTPException(status_code=403, detail="Operator role required")
-
     cluster = await service.get_cluster(cluster_id)
     if not cluster:
         raise HTTPException(status_code=404, detail="Cluster not found")
@@ -128,6 +157,14 @@ async def trigger_cluster_sync(
     from app.workers.cluster_tasks import sync_cluster
     task = sync_cluster.delay(cluster_id)
 
+    await AuditService(AuditRepository(model=AuditEvent, session=db)).record(
+        action="cluster.sync",
+        actor=current_user,
+        request=request,
+        resource_type="cluster",
+        resource_id=cluster_id,
+        metadata={"task_id": task.id},
+    )
     return SyncResponse(task_id=task.id, status="queued", cluster_id=cluster_id)
 
 

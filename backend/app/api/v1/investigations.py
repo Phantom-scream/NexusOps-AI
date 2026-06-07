@@ -1,10 +1,12 @@
 """AI investigation API."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import CurrentUser, get_current_user
+from app.core.security import CurrentUser, get_current_user, require_operator
+from app.models.audit import AuditEvent
+from app.repositories.audit_repository import AuditRepository
 from app.schemas.investigation import (
     InvestigationCreate,
     InvestigationEvidenceOut,
@@ -12,6 +14,7 @@ from app.schemas.investigation import (
     InvestigationOut,
     InvestigationRunResponse,
 )
+from app.services.audit_service import AuditService
 from app.services.investigation_service import InvestigationService
 
 router = APIRouter()
@@ -24,11 +27,21 @@ def get_investigation_service(db: AsyncSession = Depends(get_db)) -> Investigati
 @router.post("/investigations", response_model=InvestigationOut, status_code=status.HTTP_201_CREATED)
 async def create_investigation(
     data: InvestigationCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
     service: InvestigationService = Depends(get_investigation_service),
-    _: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_operator),
 ):
     """Create an investigation and optionally run it immediately."""
     investigation = await service.create_investigation(data)
+    await AuditService(AuditRepository(model=AuditEvent, session=db)).record(
+        action="investigation.create",
+        actor=current_user,
+        request=request,
+        resource_type="investigation",
+        resource_id=investigation.id,
+        metadata={"incident_id": investigation.incident_id, "run_immediately": data.run_immediately},
+    )
     return InvestigationOut.model_validate(investigation)
 
 
@@ -75,8 +88,10 @@ async def get_investigation(
 @router.post("/investigations/{investigation_id}/run", response_model=InvestigationRunResponse)
 async def run_investigation(
     investigation_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
     service: InvestigationService = Depends(get_investigation_service),
-    _: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_operator),
 ):
     """Run or rerun an investigation workflow."""
     try:
@@ -84,6 +99,14 @@ async def run_investigation(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Investigation not found") from exc
     evidence = await service.get_evidence(investigation_id)
+    await AuditService(AuditRepository(model=AuditEvent, session=db)).record(
+        action="investigation.run",
+        actor=current_user,
+        request=request,
+        resource_type="investigation",
+        resource_id=investigation.id,
+        metadata={"evidence": len(evidence), "confidence": investigation.confidence_score},
+    )
     return InvestigationRunResponse(
         investigation=InvestigationOut.model_validate(investigation),
         evidence=[InvestigationEvidenceOut.model_validate(item) for item in evidence],
