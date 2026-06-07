@@ -21,12 +21,49 @@ Expected healthy services:
 
 The frontend is available at `http://localhost:3000` and the API docs at `http://localhost:8000/docs`.
 
+Local service endpoints:
+
+| Service | URL |
+|---|---|
+| Frontend dashboard | `http://localhost:3000` |
+| Backend API | `http://localhost:8000` |
+| API documentation | `http://localhost:8000/docs` |
+| Grafana | `http://localhost:3001` |
+| Prometheus | `http://localhost:9090` |
+| Qdrant UI | `http://localhost:6333/dashboard` |
+
+## Demo Data Workflow
+
+After registering and logging in, use the UI demo actions or call the demo APIs with an access token:
+
+```bash
+TOKEN="<access-token-from-login>"
+
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8000/api/v1/demo/generate
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8000/api/v1/demo/telemetry/generate
+curl -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8000/api/v1/demo/incidents/generate
+curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -X POST http://localhost:8000/api/v1/terraform/analyze -d '{"demo":true}'
+curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -X POST http://localhost:8000/api/v1/optimization/analyze -d '{"demo":true}'
+```
+
+Development registrations receive the configured development role so local demos can run protected workflows. Production registrations default to Viewer unless explicitly configured otherwise.
+
 ## Production Image Validation
 
 ```bash
 docker build --target production -t nexusops-api:local ./backend
 docker build --target production -t nexusops-frontend:local ./frontend
 ```
+
+## Production Hardening Notes
+
+- Replace local fallback passwords with environment-specific secrets.
+- Use a secret manager or Kubernetes Secrets managed by your deployment pipeline.
+- Pin third-party service images to tested version tags or immutable digests before production use.
+- Avoid mounting broad kubeconfigs into containers; prefer least-privilege service accounts.
+- Keep OpenTelemetry, OPA, Grafana, Prometheus, Loki, Qdrant, and Redpanda versions upgraded through a controlled validation process.
 
 ## Kubernetes Manifests
 

@@ -5,7 +5,7 @@ name: nexusops
 # ============================================================
 
 x-common-env: &common-env
-  DATABASE_URL: postgresql+asyncpg://nexusops:nexusops_secret@postgres:5432/nexusops
+  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://nexusops:nexusops_secret@postgres:5432/nexusops}
   REDIS_URL: redis://redis:6379/0
   CELERY_BROKER_URL: redis://redis:6379/1
   CELERY_RESULT_BACKEND: redis://redis:6379/2
@@ -122,9 +122,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: nexusops
-      POSTGRES_USER: nexusops
-      POSTGRES_PASSWORD: nexusops_secret
+      POSTGRES_DB: ${POSTGRES_DB:-nexusops}
+      POSTGRES_USER: ${POSTGRES_USER:-nexusops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexusops_secret}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
@@ -235,8 +235,8 @@ services:
     ports:
       - "3001:3000"
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: nexusops_admin
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-nexusops_admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - grafana_data:/var/lib/grafana

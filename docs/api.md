@@ -7,9 +7,10 @@ Interactive OpenAPI documentation is available at `http://localhost:8000/docs` w
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
 
-Most platform APIs require a bearer token.
+Most platform APIs require a bearer token. Write and analysis workflows require elevated roles. See [Permissions Matrix](security/permissions-matrix.md).
 
 ## Infrastructure
 
@@ -63,6 +64,12 @@ Most platform APIs require a bearer token.
 - `GET /api/v1/optimization/recommendations`
 - `GET /api/v1/optimization/recommendations/{id}`
 - `GET /api/v1/optimization/reports`
+
+## Audit
+
+- `GET /api/v1/audit/events`
+
+Audit event listing is administrator-only and supports filters for actor email, action, resource type, status, page, and page size.
 
 ## Smoke Test Sequence
 
