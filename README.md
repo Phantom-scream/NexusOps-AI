@@ -42,13 +42,17 @@ The project is intentionally built as an engineering showcase, not a CRUD demo. 
 |---|---|
 | ![Dashboard](docs/screenshots/dashboard.png) | ![Infrastructure](docs/screenshots/infrastructure.png) |
 
-| Incidents | Security |
+| Observability | Incidents |
 |---|---|
-| ![Incidents](docs/screenshots/incidents.png) | ![Security](docs/screenshots/security.png) |
+| ![Observability](docs/screenshots/observability.png) | ![Incidents](docs/screenshots/incidents.png) |
 
-| Cost Optimization | AI Investigation |
+| Security | Cost Optimization |
 |---|---|
-| ![Cost Optimization](docs/screenshots/cost-optimization.png) | ![AI Investigation](docs/screenshots/ai-investigation.png) |
+| ![Security](docs/screenshots/security.png) | ![Cost Optimization](docs/screenshots/cost-optimization.png) |
+
+| AI Investigation | Settings |
+|---|---|
+| ![AI Investigation](docs/screenshots/ai-investigation.png) | ![Settings](docs/screenshots/settings.png) |
 
 ---
 
@@ -260,6 +264,8 @@ Response:
 - [Terraform Security & Drift](docs/terraform-security-drift.md)
 - [Cost Optimization & Resource Intelligence](docs/cost-optimization-resource-intelligence.md)
 - [Demo Scenarios](docs/demo-scenarios.md)
+- [Stitch Design System](docs/design/stitch/DESIGN.md)
+- [Stitch Integration Notes](docs/design/stitch/retrieval-report.md)
 - [API Reference](docs/api.md)
 - [Developer Onboarding](docs/onboarding.md)
 - [Deployment Guide](docs/deployment.md)

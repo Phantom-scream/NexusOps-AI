@@ -13,10 +13,12 @@ const chromeEndpoint = "http://127.0.0.1:9222";
 const pages = [
   ["dashboard", "http://localhost:3000/dashboard"],
   ["infrastructure", "http://localhost:3000/clusters"],
+  ["observability", "http://localhost:3000/observability"],
   ["incidents", "http://localhost:3000/incidents"],
   ["security", "http://localhost:3000/security"],
   ["cost-optimization", "http://localhost:3000/cost"],
   ["ai-investigation", "http://localhost:3000/ai"],
+  ["settings", "http://localhost:3000/settings"],
 ];
 
 const targetResponse = await fetch(`${chromeEndpoint}/json/new?about:blank`, { method: "PUT" });

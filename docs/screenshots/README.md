@@ -6,10 +6,12 @@ These screenshots were generated from the local Docker Compose stack using demo 
 |---|---|
 | Dashboard | ![Dashboard](dashboard.png) |
 | Infrastructure | ![Infrastructure](infrastructure.png) |
+| Observability | ![Observability](observability.png) |
 | Incidents | ![Incidents](incidents.png) |
 | Security | ![Security](security.png) |
 | Cost Optimization | ![Cost Optimization](cost-optimization.png) |
 | AI Investigation | ![AI Investigation](ai-investigation.png) |
+| Settings | ![Settings](settings.png) |
 
 To regenerate screenshots, start Chrome with remote debugging and run:
 
