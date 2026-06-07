@@ -8,7 +8,7 @@ on:
 
 jobs:
   backend:
-    name: Backend — Lint & Test
+    name: Backend — Quality Gate
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,14 +40,25 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest pytest-asyncio pytest-cov httpx
+        run: pip install -r requirements.txt
 
       - name: Lint with ruff
-        run: ruff check . --select E,F,W,I
+        run: ruff check app tests
+
+      - name: Compile backend
+        run: python -m compileall app tests alembic
 
       - name: Type check with mypy
         run: mypy app --ignore-missing-imports
         continue-on-error: true
+
+      - name: Validate migrations
+        env:
+          DATABASE_URL: postgresql+asyncpg://nexusops:nexusops_secret@localhost:5432/nexusops_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-32-characters-long
+          APP_ENV: testing
+        run: alembic upgrade head
 
       - name: Run tests
         env:
@@ -57,6 +68,22 @@ jobs:
           APP_ENV: testing
         run: pytest tests/ -v --cov=app --cov-report=xml
 
+      - name: Run API smoke tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://nexusops:nexusops_secret@localhost:5432/nexusops_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-32-characters-long
+          APP_ENV: testing
+        run: >
+          pytest
+          tests/test_auth.py
+          tests/test_infrastructure_discovery.py::test_demo_generate_and_topology_api
+          tests/test_telemetry.py::test_demo_telemetry_api_and_cluster_filters
+          tests/test_investigations.py::test_investigation_api_demo_flow
+          tests/test_terraform_analysis.py::test_terraform_api_demo_analysis_flow
+          tests/test_optimization.py::test_optimization_api_demo_flow
+          -q
+
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
@@ -64,7 +91,7 @@ jobs:
         continue-on-error: true
 
   frontend:
-    name: Frontend — Type Check & Lint
+    name: Frontend — Quality Gate
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -87,7 +114,26 @@ jobs:
 
       - name: Lint
         run: npm run lint
-        continue-on-error: true
+
+      - name: Test
+        run: npm run test
 
       - name: Build
         run: npm run build
+
+  deployment-validation:
+    name: Deployment Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Validate Docker Compose configuration
+        run: docker compose config --quiet
+
+      - name: Build backend production image
+        run: docker build --target production -t nexusops-api:ci ./backend
+
+      - name: Build frontend production image
+        run: docker build --target production -t nexusops-frontend:ci ./frontend

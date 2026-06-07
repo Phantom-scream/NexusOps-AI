@@ -7,15 +7,11 @@ data:
   APP_NAME: "NexusOps AI"
   APP_ENV: "production"
   LOG_LEVEL: "INFO"
-  POSTGRES_HOST: "postgres"
-  POSTGRES_PORT: "5432"
-  POSTGRES_DB: "nexusops"
-  REDIS_HOST: "redis"
-  REDIS_PORT: "6379"
   QDRANT_HOST: "qdrant"
   QDRANT_PORT: "6333"
   KAFKA_BOOTSTRAP_SERVERS: "redpanda:9092"
-  OTEL_COLLECTOR_ENDPOINT: "http://otel-collector:4317"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+  OPA_SERVER_URL: "http://opa:8181"
 ---
 apiVersion: v1
 kind: ServiceAccount

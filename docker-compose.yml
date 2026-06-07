@@ -1,5 +1,3 @@
-version: "3.9"
-
 name: nexusops
 
 # ============================================================
@@ -129,7 +127,7 @@ services:
       POSTGRES_PASSWORD: nexusops_secret
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
     networks:
       - nexusops-net
     restart: unless-stopped
